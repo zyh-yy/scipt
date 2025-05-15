@@ -1,0 +1,189 @@
+2025-05-15 20:59:49,655 - config - INFO - 数据库初始化成功
+2025-05-15 20:59:49,660 - config - INFO - 启动应用服务，监听端口: 5000
+2025-05-15 20:59:51,043 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.0.6:5000
+2025-05-15 20:59:51,043 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-05-15 20:59:51,047 - werkzeug - INFO -  * Restarting with stat
+2025-05-15 20:59:51,482 - config - INFO - 数据库初始化成功
+2025-05-15 20:59:51,486 - config - INFO - 启动应用服务，监听端口: 5000
+2025-05-15 20:59:51,545 - werkzeug - WARNING -  * Debugger is active!
+2025-05-15 20:59:51,549 - werkzeug - INFO -  * Debugger PIN: 188-467-372
+2025-05-15 21:23:54,302 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:23:54] "GET /api/scripts HTTP/1.1" 200 -
+2025-05-15 21:23:54,302 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:23:54] "GET /api/chains HTTP/1.1" 200 -
+2025-05-15 21:23:54,303 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:23:54] "GET /api/execution/history HTTP/1.1" 200 -
+2025-05-15 21:23:55,761 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:23:55] "GET /api/scripts HTTP/1.1" 200 -
+2025-05-15 21:23:58,494 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:23:58] "GET /api/scripts HTTP/1.1" 200 -
+2025-05-15 21:23:58,495 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:23:58] "GET /api/chains HTTP/1.1" 200 -
+2025-05-15 21:23:58,496 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:23:58] "GET /api/execution/history HTTP/1.1" 200 -
+2025-05-15 21:24:02,678 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:24:02] "GET /api/scripts HTTP/1.1" 200 -
+2025-05-15 21:30:02,779 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:30:02] "GET /api/scripts HTTP/1.1" 200 -
+2025-05-15 21:30:02,780 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:30:02] "GET /api/chains HTTP/1.1" 200 -
+2025-05-15 21:30:02,780 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:30:02] "GET /api/execution/history HTTP/1.1" 200 -
+2025-05-15 21:30:29,466 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:30:29] "GET /api/scripts HTTP/1.1" 200 -
+2025-05-15 21:38:18,422 - werkzeug - INFO -  * Detected change in 'C:\\Users\\zhuyu\\Desktop\\study\\lijialu\\scipt\\backend\\routes\\scripts.py', reloading
+2025-05-15 21:38:18,473 - werkzeug - INFO -  * Restarting with stat
+2025-05-15 21:38:18,971 - config - INFO - 数据库初始化成功
+2025-05-15 21:38:18,976 - config - INFO - 启动应用服务，监听端口: 5000
+2025-05-15 21:38:19,036 - werkzeug - WARNING -  * Debugger is active!
+2025-05-15 21:38:19,040 - werkzeug - INFO -  * Debugger PIN: 188-467-372
+2025-05-15 21:38:43,876 - werkzeug - INFO -  * Detected change in 'C:\\Users\\zhuyu\\Desktop\\study\\lijialu\\scipt\\backend\\routes\\scripts.py', reloading
+2025-05-15 21:38:43,916 - werkzeug - INFO -  * Restarting with stat
+2025-05-15 21:38:44,371 - config - INFO - 数据库初始化成功
+2025-05-15 21:38:44,375 - config - INFO - 启动应用服务，监听端口: 5000
+2025-05-15 21:38:44,424 - werkzeug - WARNING -  * Debugger is active!
+2025-05-15 21:38:44,429 - werkzeug - INFO -  * Debugger PIN: 188-467-372
+2025-05-15 21:43:12,419 - config - INFO - 数据库初始化成功
+2025-05-15 21:43:12,424 - config - INFO - 启动应用服务，监听端口: 5000
+2025-05-15 21:43:13,810 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.0.6:5000
+2025-05-15 21:43:13,810 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-05-15 21:43:13,813 - werkzeug - INFO -  * Restarting with stat
+2025-05-15 21:43:14,209 - config - INFO - 数据库初始化成功
+2025-05-15 21:43:14,214 - config - INFO - 启动应用服务，监听端口: 5000
+2025-05-15 21:43:14,259 - werkzeug - WARNING -  * Debugger is active!
+2025-05-15 21:43:14,264 - werkzeug - INFO -  * Debugger PIN: 188-467-372
+2025-05-15 21:43:18,653 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:43:18] "GET /api/execution/history HTTP/1.1" 200 -
+2025-05-15 21:43:18,653 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:43:18] "GET /api/scripts HTTP/1.1" 200 -
+2025-05-15 21:43:18,654 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:43:18] "GET /api/chains HTTP/1.1" 200 -
+2025-05-15 21:43:18,977 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:43:18] "GET /api/scripts HTTP/1.1" 200 -
+2025-05-15 21:43:19,815 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:43:19] "GET /api/scripts HTTP/1.1" 200 -
+2025-05-15 21:43:19,816 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:43:19] "GET /api/chains HTTP/1.1" 200 -
+2025-05-15 21:43:19,817 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:43:19] "GET /api/execution/history HTTP/1.1" 200 -
+2025-05-15 21:43:20,061 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:43:20] "GET /api/chains HTTP/1.1" 200 -
+2025-05-15 21:43:20,327 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:43:20] "GET /api/scripts HTTP/1.1" 200 -
+2025-05-15 21:43:20,742 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:43:20] "GET /api/scripts HTTP/1.1" 200 -
+2025-05-15 21:43:21,323 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:43:21] "GET /api/scripts HTTP/1.1" 200 -
+2025-05-15 21:43:21,324 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:43:21] "GET /api/chains HTTP/1.1" 200 -
+2025-05-15 21:43:21,325 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:43:21] "GET /api/execution/history HTTP/1.1" 200 -
+2025-05-15 21:43:22,214 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:43:22] "GET /api/scripts HTTP/1.1" 200 -
+2025-05-15 21:43:34,639 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:43:34] "POST /api/scripts/upload-file HTTP/1.1" 200 -
+2025-05-15 21:48:48,275 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:48:48] "GET /api/scripts HTTP/1.1" 200 -
+2025-05-15 21:48:48,276 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:48:48] "GET /api/execution/history HTTP/1.1" 200 -
+2025-05-15 21:48:48,286 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:48:48] "GET /api/chains HTTP/1.1" 200 -
+2025-05-15 21:48:50,323 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:48:50] "GET /api/scripts HTTP/1.1" 200 -
+2025-05-15 21:49:00,046 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:49:00] "POST /api/scripts/upload-file HTTP/1.1" 200 -
+2025-05-15 21:49:12,492 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:49:12] "POST /api/scripts/upload-file HTTP/1.1" 200 -
+2025-05-15 21:49:18,790 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:49:18] "GET /api/scripts HTTP/1.1" 200 -
+2025-05-15 21:49:18,797 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:49:18] "GET /api/chains HTTP/1.1" 200 -
+2025-05-15 21:49:18,799 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:49:18] "GET /api/execution/history HTTP/1.1" 200 -
+2025-05-15 21:49:19,446 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 21:49:19] "GET /api/scripts HTTP/1.1" 200 -
+2025-05-15 21:59:05,722 - werkzeug - INFO -  * Detected change in 'C:\\Users\\zhuyu\\Desktop\\study\\lijialu\\scipt\\backend\\models\\base.py', reloading
+2025-05-15 21:59:05,764 - werkzeug - INFO -  * Restarting with stat
+2025-05-15 21:59:06,204 - config - INFO - 数据库初始化成功
+2025-05-15 21:59:06,209 - config - INFO - 启动应用服务，监听端口: 5000
+2025-05-15 21:59:06,252 - werkzeug - WARNING -  * Debugger is active!
+2025-05-15 21:59:06,255 - werkzeug - INFO -  * Debugger PIN: 188-467-372
+2025-05-15 22:00:09,624 - werkzeug - INFO -  * Detected change in 'C:\\Users\\zhuyu\\Desktop\\study\\lijialu\\scipt\\backend\\models\\script.py', reloading
+2025-05-15 22:00:09,656 - werkzeug - INFO -  * Restarting with stat
+2025-05-15 22:00:09,967 - config - INFO - 数据库初始化成功
+2025-05-15 22:00:09,970 - config - INFO - 启动应用服务，监听端口: 5000
+2025-05-15 22:00:10,008 - werkzeug - WARNING -  * Debugger is active!
+2025-05-15 22:00:10,011 - werkzeug - INFO -  * Debugger PIN: 188-467-372
+2025-05-15 22:00:48,020 - werkzeug - INFO -  * Detected change in 'C:\\Users\\zhuyu\\Desktop\\study\\lijialu\\scipt\\backend\\models\\chain.py', reloading
+2025-05-15 22:00:48,048 - werkzeug - INFO -  * Restarting with stat
+2025-05-15 22:00:48,423 - config - INFO - 数据库初始化成功
+2025-05-15 22:00:48,428 - config - INFO - 启动应用服务，监听端口: 5000
+2025-05-15 22:00:48,502 - werkzeug - WARNING -  * Debugger is active!
+2025-05-15 22:00:48,505 - werkzeug - INFO -  * Debugger PIN: 188-467-372
+2025-05-15 22:02:08,628 - werkzeug - INFO -  * Detected change in 'C:\\Users\\zhuyu\\Desktop\\study\\lijialu\\scipt\\backend\\models\\execution.py', reloading
+2025-05-15 22:02:08,667 - werkzeug - INFO -  * Restarting with stat
+2025-05-15 22:02:09,170 - config - INFO - 数据库初始化成功
+2025-05-15 22:02:09,174 - config - INFO - 启动应用服务，监听端口: 5000
+2025-05-15 22:02:09,209 - werkzeug - WARNING -  * Debugger is active!
+2025-05-15 22:02:09,211 - werkzeug - INFO -  * Debugger PIN: 188-467-372
+2025-05-15 22:02:51,515 - werkzeug - INFO -  * Detected change in 'C:\\Users\\zhuyu\\Desktop\\study\\lijialu\\scipt\\backend\\models\\schedule.py', reloading
+2025-05-15 22:02:51,551 - werkzeug - INFO -  * Restarting with stat
+2025-05-15 22:02:51,851 - config - INFO - 数据库初始化成功
+2025-05-15 22:02:51,854 - config - INFO - 启动应用服务，监听端口: 5000
+2025-05-15 22:02:51,889 - werkzeug - WARNING -  * Debugger is active!
+2025-05-15 22:02:51,893 - werkzeug - INFO -  * Debugger PIN: 188-467-372
+2025-05-15 22:03:52,584 - werkzeug - INFO -  * Detected change in 'C:\\Users\\zhuyu\\Desktop\\study\\lijialu\\scipt\\backend\\models\\ai_generator.py', reloading
+2025-05-15 22:03:52,644 - werkzeug - INFO -  * Restarting with stat
+2025-05-15 22:03:52,917 - config - INFO - 数据库初始化成功
+2025-05-15 22:03:52,921 - config - INFO - 启动应用服务，监听端口: 5000
+2025-05-15 22:03:52,952 - werkzeug - WARNING -  * Debugger is active!
+2025-05-15 22:03:52,956 - werkzeug - INFO -  * Debugger PIN: 188-467-372
+2025-05-15 22:06:57,048 - werkzeug - INFO -  * Detected change in 'C:\\Users\\zhuyu\\Desktop\\study\\lijialu\\scipt\\backend\\models\\__init__.py', reloading
+2025-05-15 22:06:57,080 - werkzeug - INFO -  * Restarting with stat
+2025-05-15 22:30:18,657 - config - INFO - 数据库初始化成功
+2025-05-15 22:30:18,663 - config - INFO - 启动应用服务，监听端口: 5000
+2025-05-15 22:30:19,998 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.0.6:5000
+2025-05-15 22:30:19,998 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-05-15 22:30:20,000 - werkzeug - INFO -  * Restarting with stat
+2025-05-15 22:30:20,931 - config - INFO - 数据库初始化成功
+2025-05-15 22:30:20,939 - config - INFO - 启动应用服务，监听端口: 5000
+2025-05-15 22:30:20,971 - werkzeug - WARNING -  * Debugger is active!
+2025-05-15 22:30:20,974 - werkzeug - INFO -  * Debugger PIN: 188-467-372
+2025-05-15 22:30:40,880 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:30:40] "GET /api/scripts HTTP/1.1" 200 -
+2025-05-15 22:30:40,881 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:30:40] "GET /api/execution/history HTTP/1.1" 200 -
+2025-05-15 22:30:40,891 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:30:40] "GET /api/chains HTTP/1.1" 200 -
+2025-05-15 22:30:41,771 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:30:41] "GET /api/alert/config HTTP/1.1" 200 -
+2025-05-15 22:30:43,167 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:30:43] "GET /api/execution/history HTTP/1.1" 200 -
+2025-05-15 22:30:43,415 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:30:43] "GET /api/schedule HTTP/1.1" 200 -
+2025-05-15 22:30:43,604 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:30:43] "GET /api/scripts HTTP/1.1" 200 -
+2025-05-15 22:30:43,605 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:30:43] "GET /api/chains HTTP/1.1" 200 -
+2025-05-15 22:30:43,737 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:30:43] "GET /api/chains HTTP/1.1" 200 -
+2025-05-15 22:30:44,042 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:30:44] "GET /api/scripts HTTP/1.1" 200 -
+2025-05-15 22:30:44,385 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:30:44] "GET /api/scripts HTTP/1.1" 200 -
+2025-05-15 22:30:44,635 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:30:44] "GET /api/chains HTTP/1.1" 200 -
+2025-05-15 22:30:44,635 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:30:44] "GET /api/execution/history HTTP/1.1" 200 -
+2025-05-15 22:30:44,636 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:30:44] "GET /api/scripts HTTP/1.1" 200 -
+2025-05-15 22:30:46,406 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:30:46] "GET /api/scripts HTTP/1.1" 200 -
+2025-05-15 22:30:47,263 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:30:47] "GET /api/chains HTTP/1.1" 200 -
+2025-05-15 22:30:47,264 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:30:47] "GET /api/scripts HTTP/1.1" 200 -
+2025-05-15 22:30:47,814 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:30:47] "GET /api/schedule HTTP/1.1" 200 -
+2025-05-15 22:30:48,119 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:30:48] "GET /api/scripts HTTP/1.1" 200 -
+2025-05-15 22:30:48,120 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:30:48] "GET /api/chains HTTP/1.1" 200 -
+2025-05-15 22:30:48,892 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:30:48] "GET /api/execution/history HTTP/1.1" 200 -
+2025-05-15 22:30:50,762 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:30:50] "GET /api/scripts HTTP/1.1" 200 -
+2025-05-15 22:30:58,139 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:30:58] "POST /api/scripts/upload-file HTTP/1.1" 200 -
+2025-05-15 22:31:01,749 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:31:01] "GET /api/chains HTTP/1.1" 200 -
+2025-05-15 22:31:02,050 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:31:02] "GET /api/scripts HTTP/1.1" 200 -
+2025-05-15 22:31:02,390 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:31:02] "GET /api/schedule HTTP/1.1" 200 -
+2025-05-15 22:31:02,390 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:31:02] "GET /api/scripts HTTP/1.1" 200 -
+2025-05-15 22:31:02,391 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:31:02] "GET /api/chains HTTP/1.1" 200 -
+2025-05-15 22:31:02,654 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:31:02] "GET /api/alert/config HTTP/1.1" 200 -
+2025-05-15 22:31:02,833 - werkzeug - INFO - 127.0.0.1 - - [15/May/2025 22:31:02] "GET /api/execution/history HTTP/1.1" 200 -
+2025-05-15 22:39:14,862 - config - INFO - 数据库初始化成功
+2025-05-15 22:39:14,869 - config - INFO - 启动应用服务，监听端口: 5000
+2025-05-15 22:39:16,220 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.0.6:5000
+2025-05-15 22:39:16,220 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-05-15 22:39:16,222 - werkzeug - INFO -  * Restarting with stat
+2025-05-15 22:39:17,096 - config - INFO - 数据库初始化成功
+2025-05-15 22:39:17,103 - config - INFO - 启动应用服务，监听端口: 5000
+2025-05-15 22:39:17,135 - werkzeug - WARNING -  * Debugger is active!
+2025-05-15 22:39:17,137 - werkzeug - INFO -  * Debugger PIN: 188-467-372
+2025-05-15 22:51:49,413 - config - INFO - 数据库初始化成功
+2025-05-15 22:51:49,422 - config - INFO - 启动应用服务，监听端口: 5000
+2025-05-15 22:51:50,784 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.0.6:5000
+2025-05-15 22:51:50,785 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-05-15 22:51:50,788 - werkzeug - INFO -  * Restarting with stat
+2025-05-15 22:51:52,889 - config - INFO - 数据库初始化成功
+2025-05-15 22:51:52,899 - config - INFO - 启动应用服务，监听端口: 5000
+2025-05-15 22:51:52,955 - werkzeug - WARNING -  * Debugger is active!
+2025-05-15 22:51:52,960 - werkzeug - INFO -  * Debugger PIN: 188-467-372
+2025-05-15 22:55:34,317 - config - INFO - 数据库初始化成功
+2025-05-15 22:55:34,327 - config - INFO - 启动应用服务，监听端口: 5000
+2025-05-15 22:55:35,696 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.0.6:5000
+2025-05-15 22:55:35,696 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-05-15 22:55:35,698 - werkzeug - INFO -  * Restarting with stat
+2025-05-15 22:55:36,986 - config - INFO - 数据库初始化成功
+2025-05-15 22:55:36,995 - config - INFO - 启动应用服务，监听端口: 5000
+2025-05-15 22:55:37,042 - werkzeug - WARNING -  * Debugger is active!
+2025-05-15 22:55:37,047 - werkzeug - INFO -  * Debugger PIN: 188-467-372
