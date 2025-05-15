@@ -8,6 +8,7 @@ from models import AlertConfig, AlertHistory
 from services import EmailService
 from config import logger
 
+
 alert_bp = Blueprint('alert', __name__, url_prefix='/api/alert')
 
 @alert_bp.route('/config', methods=['GET'])
