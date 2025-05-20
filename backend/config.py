@@ -31,6 +31,18 @@ logger = logging.getLogger(__name__)
 SCRIPT_TIMEOUT = 300  # 脚本执行超时时间（秒）
 MAX_OUTPUT_SIZE = 1024 * 1024  # 最大输出大小（字节）
 
+# Docker执行配置
+USE_DOCKER = True  # 是否使用Docker容器执行脚本
+DOCKER_TIMEOUT = 300  # Docker容器执行超时时间（秒）
+DOCKER_DEFAULT_IMAGES = {
+    'py': 'python:3.9-slim',
+    'js': 'node:16-alpine',
+    'sh': 'ubuntu:20.04',
+    'bash': 'ubuntu:20.04',
+    'ps1': 'mcr.microsoft.com/powershell:latest',
+    'bat': 'mcr.microsoft.com/windows/servercore:ltsc2019'  # 注意：Windows容器需要Windows宿主机
+}
+
 # 应用配置
 class Config:
     """应用基础配置类"""

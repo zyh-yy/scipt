@@ -12,13 +12,14 @@ import subprocess
 import tempfile
 from pathlib import Path
 import threading
-from config import SCRIPT_TIMEOUT, ALLOWED_EXTENSIONS, logger
+from config import SCRIPT_TIMEOUT, ALLOWED_EXTENSIONS, USE_DOCKER, logger
+from .docker_executor import DockerExecutor
 
 class ScriptRunner:
     """脚本执行器类，负责执行各种类型的脚本"""
     
     @staticmethod
-    def run_script(script_path, params=None, prev_output=None):
+    def run_script(script_path, params=None, prev_output=None, use_docker=None):
         """
         执行脚本
         
@@ -26,6 +27,7 @@ class ScriptRunner:
             script_path: 脚本文件路径
             params: 脚本参数字典
             prev_output: 上一个脚本的输出（链式执行时使用）
+            use_docker: 是否使用Docker容器执行，None表示使用配置默认值
             
         Returns:
             tuple: (success, output, error)
@@ -43,6 +45,15 @@ class ScriptRunner:
         # 准备参数和上一个脚本的输出
         prepared_params = ScriptRunner._prepare_params(params, prev_output)
         
+        # 确定是否使用Docker执行
+        use_docker_execution = USE_DOCKER if use_docker is None else use_docker
+        
+        # 如果启用Docker执行
+        if use_docker_execution:
+            logger.info(f"使用Docker容器执行脚本: {script_path}")
+            return DockerExecutor.run_script_in_docker(script_path, prepared_params, prev_output)
+        
+        # 直接在主机上执行脚本
         # 根据脚本类型执行不同的命令
         if ext == 'py':
             return ScriptRunner._run_python_script(script_path, prepared_params)
@@ -370,18 +381,28 @@ class ScriptRunner:
             return False, None, f"执行JavaScript脚本失败: {str(e)}"
     
     @staticmethod
-    def run_script_chain(chain_nodes, params=None):
+    def run_script_chain(chain_nodes, params=None, use_docker=None):
         """
         执行脚本链
         
         Args:
             chain_nodes: 链节点列表，包含脚本路径
             params: 初始脚本参数
+            use_docker: 是否使用Docker容器执行，None表示使用配置默认值
             
         Returns:
             tuple: (success, outputs, error)
                 outputs是一个字典，键是脚本ID，值是输出
         """
+        # 确定是否使用Docker执行
+        use_docker_execution = USE_DOCKER if use_docker is None else use_docker
+        
+        # 如果启用Docker执行，使用Docker执行脚本链
+        if use_docker_execution:
+            logger.info(f"使用Docker容器执行脚本链: 共{len(chain_nodes)}个节点")
+            return DockerExecutor.run_script_chain_in_docker(chain_nodes, params)
+        
+        # 直接在主机上执行脚本链
         outputs = {}
         prev_output = None
         
@@ -402,7 +423,8 @@ class ScriptRunner:
             success, output, error = ScriptRunner.run_script(
                 script_path, 
                 node_params, 
-                prev_output
+                prev_output,
+                use_docker=False  # 确保在链执行中的单个脚本不再使用Docker（因为整个链已经决定了执行方式）
             )
             
             # 保存结果

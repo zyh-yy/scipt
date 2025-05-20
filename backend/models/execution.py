@@ -6,8 +6,98 @@
 import datetime
 import json
 import time
+import os
+import sys
 from .base import DBManager
+
+# Use the same approach for importing config as in base.py
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import logger
+
+class AlertHandler:
+    """告警处理器类"""
+    
+    @staticmethod
+    def check_alerts(execution_id, status, error=None):
+        """检查是否需要触发告警"""
+        try:
+            # 获取执行记录详情
+            execution = ExecutionHistory.get(execution_id)
+            if not execution:
+                return False
+            
+            # 获取所有激活的告警配置
+            alert_configs = AlertConfig.get_all(is_active=1)
+            
+            for config in alert_configs:
+                # 根据不同的告警类型和条件检查是否需要触发
+                if config['alert_type'] == 'execution_status':
+                    # 执行状态告警
+                    if config['condition_type'] == 'equals' and config['condition_value'] == status:
+                        AlertHandler.trigger_alert(config, execution, status, error)
+                    elif config['condition_type'] == 'contains_error' and status == 'failed' and error:
+                        AlertHandler.trigger_alert(config, execution, status, error)
+                
+                elif config['alert_type'] == 'execution_time':
+                    # 执行时间告警
+                    if execution.get('execution_time') and float(execution['execution_time']) > float(config['condition_value']):
+                        AlertHandler.trigger_alert(config, execution, status, f"执行时间 {execution['execution_time']} 秒超过阈值 {config['condition_value']} 秒")
+            
+            return True
+        except Exception as e:
+            logger.error(f"检查告警失败: {str(e)}")
+            return False
+    
+    @staticmethod
+    def trigger_alert(alert_config, execution, status, message=None):
+        """触发告警通知"""
+        try:
+            # 生成告警消息内容
+            if not message:
+                message = f"脚本执行{'成功' if status == 'completed' else '失败'}"
+            
+            if execution.get('script_id'):
+                subject = f"脚本执行{status}告警"
+                content = f"脚本ID: {execution['script_id']}\n"
+            elif execution.get('chain_id'):
+                subject = f"脚本链执行{status}告警"
+                content = f"脚本链ID: {execution['chain_id']}\n"
+            else:
+                subject = f"执行{status}告警"
+                content = ""
+            
+            content += f"执行ID: {execution['id']}\n"
+            content += f"状态: {status}\n"
+            content += f"开始时间: {execution['start_time']}\n"
+            if execution.get('end_time'):
+                content += f"结束时间: {execution['end_time']}\n"
+            if execution.get('execution_time'):
+                content += f"执行时间: {execution['execution_time']} 秒\n"
+            content += f"消息: {message}\n"
+            
+            # 根据通知类型发送告警
+            if alert_config['notification_type'] == 'email':
+                # 发送邮件告警
+                notification_config = alert_config['notification_config']
+                recipients = notification_config.get('recipients', [])
+                
+                from services.email_service import EmailService
+                email_service = EmailService()
+                success = email_service.send_email(recipients, subject, content)
+                
+                # 记录告警历史
+                status = "sent" if success else "failed"
+                AlertHistory.add(alert_config['id'], execution['id'], status, message)
+                
+                return success
+            
+            # 添加更多通知类型支持
+            
+            return False
+        except Exception as e:
+            logger.error(f"触发告警失败: {str(e)}")
+            return False
+
 
 class ExecutionHistory:
     """执行历史模型类"""
@@ -529,88 +619,3 @@ class AlertHistory:
         except Exception as e:
             logger.error(f"获取告警历史记录列表失败: {str(e)}")
             return []
-
-
-class AlertHandler:
-    """告警处理器类"""
-    
-    @staticmethod
-    def check_alerts(execution_id, status, error=None):
-        """检查是否需要触发告警"""
-        try:
-            # 获取执行记录详情
-            execution = ExecutionHistory.get(execution_id)
-            if not execution:
-                return False
-            
-            # 获取所有激活的告警配置
-            alert_configs = AlertConfig.get_all(is_active=1)
-            
-            for config in alert_configs:
-                # 根据不同的告警类型和条件检查是否需要触发
-                if config['alert_type'] == 'execution_status':
-                    # 执行状态告警
-                    if config['condition_type'] == 'equals' and config['condition_value'] == status:
-                        AlertHandler.trigger_alert(config, execution, status, error)
-                    elif config['condition_type'] == 'contains_error' and status == 'failed' and error:
-                        AlertHandler.trigger_alert(config, execution, status, error)
-                
-                elif config['alert_type'] == 'execution_time':
-                    # 执行时间告警
-                    if execution.get('execution_time') and float(execution['execution_time']) > float(config['condition_value']):
-                        AlertHandler.trigger_alert(config, execution, status, f"执行时间 {execution['execution_time']} 秒超过阈值 {config['condition_value']} 秒")
-            
-            return True
-        except Exception as e:
-            logger.error(f"检查告警失败: {str(e)}")
-            return False
-    
-    @staticmethod
-    def trigger_alert(alert_config, execution, status, message=None):
-        """触发告警通知"""
-        try:
-            # 生成告警消息内容
-            if not message:
-                message = f"脚本执行{'成功' if status == 'completed' else '失败'}"
-            
-            if execution.get('script_id'):
-                subject = f"脚本执行{status}告警"
-                content = f"脚本ID: {execution['script_id']}\n"
-            elif execution.get('chain_id'):
-                subject = f"脚本链执行{status}告警"
-                content = f"脚本链ID: {execution['chain_id']}\n"
-            else:
-                subject = f"执行{status}告警"
-                content = ""
-            
-            content += f"执行ID: {execution['id']}\n"
-            content += f"状态: {status}\n"
-            content += f"开始时间: {execution['start_time']}\n"
-            if execution.get('end_time'):
-                content += f"结束时间: {execution['end_time']}\n"
-            if execution.get('execution_time'):
-                content += f"执行时间: {execution['execution_time']} 秒\n"
-            content += f"消息: {message}\n"
-            
-            # 根据通知类型发送告警
-            if alert_config['notification_type'] == 'email':
-                # 发送邮件告警
-                notification_config = alert_config['notification_config']
-                recipients = notification_config.get('recipients', [])
-                
-                from services.email_service import EmailService
-                email_service = EmailService()
-                success = email_service.send_email(recipients, subject, content)
-                
-                # 记录告警历史
-                status = "sent" if success else "failed"
-                AlertHistory.add(alert_config['id'], execution['id'], status, message)
-                
-                return success
-            
-            # 添加更多通知类型支持
-            
-            return False
-        except Exception as e:
-            logger.error(f"触发告警失败: {str(e)}")
-            return False

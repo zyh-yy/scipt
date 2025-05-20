@@ -61,6 +61,114 @@ def get_script(script_id):
             'data': None
         }), 500
 
+@script_bp.route('/with-file', methods=['POST'])
+def add_script_with_file():
+    """添加新脚本（同时上传文件）"""
+    try:
+        # 获取表单数据
+        name = request.form.get('name', '')
+        description = request.form.get('description', '')
+        params_json = request.form.get('parameters', '[]')
+        
+        # 验证必填字段
+        if not name:
+            return jsonify({
+                'code': 400,
+                'message': '脚本名称不能为空',
+                'data': None
+            }), 400
+        
+        # 检查文件是否存在
+        if 'file' not in request.files:
+            return jsonify({
+                'code': 400,
+                'message': '请选择脚本文件',
+                'data': None
+            }), 400
+        
+        file = request.files['file']
+        
+        # 检查文件名是否为空
+        if file.filename == '':
+            return jsonify({
+                'code': 400,
+                'message': '文件名不能为空',
+                'data': None
+            }), 400
+        
+        # 检查文件类型是否允许
+        if not allowed_file(file.filename):
+            allowed_exts = ', '.join(ALLOWED_EXTENSIONS)
+            return jsonify({
+                'code': 400,
+                'message': f'不支持的文件类型，只允许: {allowed_exts}',
+                'data': None
+            }), 400
+        
+        # 保存文件
+        filename = secure_filename(file.filename)
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+        filename = f"{timestamp}_{filename}"  # 添加时间戳防止文件名冲突
+        
+        # 确保上传目录存在
+        if not os.path.exists(UPLOAD_FOLDER):
+            os.makedirs(UPLOAD_FOLDER)
+        
+        file_path = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(file_path)
+        
+        # 获取文件类型
+        file_type = filename.rsplit('.', 1)[1].lower()
+        
+        # 解析参数数据
+        try:
+            params = json.loads(params_json)
+        except:
+            params = []
+        
+        # 添加到数据库
+        script_id = Script.add(name, description, file_path, file_type)
+        
+        if not script_id:
+            # 删除已上传的文件
+            try:
+                os.remove(file_path)
+            except:
+                pass
+            
+            return jsonify({
+                'code': 500,
+                'message': '添加脚本到数据库失败',
+                'data': None
+            }), 500
+        
+        # 处理参数信息
+        for param in params:
+            ScriptParameter.add(
+                script_id,
+                param.get('name'),
+                param.get('description', ''),
+                param.get('param_type', 'string'),
+                param.get('is_required', 1),
+                param.get('default_value')
+            )
+        
+        # 获取完整的脚本信息
+        script = Script.get(script_id)
+        
+        return jsonify({
+            'code': 0,
+            'message': '添加脚本成功',
+            'data': script
+        })
+    except Exception as e:
+        logger.error(f"添加脚本失败: {str(e)}")
+        return jsonify({
+            'code': 500,
+            'message': f'添加脚本失败: {str(e)}',
+            'data': None
+        }), 500
+        
 @script_bp.route('/upload-file', methods=['POST'])
 def upload_script_file():
     """上传脚本文件，返回文件ID"""

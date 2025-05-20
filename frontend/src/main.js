@@ -4,9 +4,13 @@ import router from './router';
 import store from './store';
 import ElementUI from 'element-ui';
 import 'element-ui/lib/theme-chalk/index.css';
+import axios from 'axios';
 
 // 引入ECharts
 import * as echarts from 'echarts';
+
+// 全局挂载axios实例
+Vue.prototype.$axios = axios;
 
 // 全局挂载ECharts实例
 Vue.prototype.$echarts = echarts;

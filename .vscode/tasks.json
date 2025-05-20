@@ -1,0 +1,18 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "启动Chrome调试模式",
+            "type": "shell",
+            "command": "start chrome --remote-debugging-port=9222 http://localhost:8080",
+            "windows": {
+                "command": "Start-Process -FilePath \"chrome\" -ArgumentList \"--remote-debugging-port=9222\",\"http://localhost:8080\""
+            },
+            "group": "none",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
+        }
+    ]
+}

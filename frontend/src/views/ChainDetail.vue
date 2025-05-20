@@ -69,9 +69,22 @@
       <div>
         <p>确认执行脚本链 <strong>{{ chain ? chain.name : '' }}</strong>？</p>
         
-        <div v-if="hasRequiredParams" class="params-form">
-          <h3>脚本链参数配置</h3>
-          <el-form ref="executeForm" :model="executeParams" label-width="100px">
+        <el-form ref="executeForm" :model="executeParams" label-width="100px">
+          <!-- Docker执行选项 -->
+          <el-form-item label="执行方式">
+            <el-switch
+              v-model="useDocker"
+              active-text="Docker容器"
+              inactive-text="本地执行"
+              active-color="#13ce66"
+            ></el-switch>
+            <div class="execution-mode-desc">
+              <small>{{ useDocker ? '在Docker容器中隔离执行脚本链' : '直接在主机上执行脚本链' }}</small>
+            </div>
+          </el-form-item>
+          
+          <div v-if="hasRequiredParams" class="params-form">
+            <h3>脚本链参数配置</h3>
             <el-form-item 
               v-for="param in allParams" 
               :key="param.id"
@@ -106,8 +119,8 @@
                 v-model="executeParams[param.name]"
               ></el-switch>
             </el-form-item>
-          </el-form>
-        </div>
+          </div>
+        </el-form>
       </div>
       <div slot="footer" class="dialog-footer">
         <el-button @click="executeDialogVisible = false">取消</el-button>
@@ -186,7 +199,8 @@ export default {
       executeParams: {},
       executing: false,
       executeResult: null,
-      allParams: []
+      allParams: [],
+      useDocker: true // 默认使用Docker执行
     };
   },
   computed: {
@@ -316,26 +330,30 @@ export default {
     confirmExecute() {
       this.executing = true;
       this.executeDialogVisible = false;
-      this.resultDialogVisible = true;
-      this.executeResult = null;
+      
+      // 添加执行方式参数
+      const params = {
+        ...this.executeParams,
+        use_docker: this.useDocker
+      };
       
       this.$store.dispatch('executeChain', {
         chainId: this.chainId,
-        params: this.executeParams
+        params: params
       }).then(result => {
-        this.executeResult = {
-          success: result.code === 0,
-          message: result.message,
-          outputs: result.data && result.data.outputs,
-          error: result.data && result.data.error,
-          history_id: result.data && result.data.history_id
-        };
+        if (result.code === 0) {
+          // 提交成功，显示提示
+          this.$message.success('脚本链执行请求已提交，请在执行记录中查看结果');
+          
+          // 可选：导航到执行历史详情页
+          if (result.data && result.data.history_id) {
+            this.$router.push(`/history/${result.data.history_id}`);
+          }
+        } else {
+          this.$message.error(result.message || '提交执行请求失败');
+        }
       }).catch(error => {
-        this.executeResult = {
-          success: false,
-          message: '执行请求失败',
-          error: error.message
-        };
+        this.$message.error('提交执行请求失败: ' + error.message);
       }).finally(() => {
         this.executing = false;
       });

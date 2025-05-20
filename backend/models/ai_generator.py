@@ -34,7 +34,7 @@ class AIGenerator:
             # 获取API密钥（如果未提供则从配置获取）
             if not api_key:
                 # 可以从数据库或环境变量中获取默认API密钥
-                from config import AI_API_KEY
+                from backend.config import AI_API_KEY
                 api_key = AI_API_KEY
             
             if not api_key:
@@ -163,7 +163,7 @@ class AIGenerator:
         """
         try:
             # 确保脚本文件夹存在
-            from config import UPLOAD_FOLDER
+            from backend.config import UPLOAD_FOLDER
             if not os.path.exists(UPLOAD_FOLDER):
                 os.makedirs(UPLOAD_FOLDER)
             
@@ -271,7 +271,7 @@ class AIGenerator:
             # 获取API密钥（如果未提供则从配置获取）
             if not api_key:
                 # 可以从数据库或环境变量中获取默认API密钥
-                from config import AI_API_KEY
+                from backend.config import AI_API_KEY
                 api_key = AI_API_KEY
             
             if not api_key:

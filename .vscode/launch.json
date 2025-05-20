@@ -1,0 +1,25 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "chrome",
+            "request": "launch",
+            "name": "前端调试",
+            "url": "http://localhost:8080",
+            "webRoot": "${workspaceFolder}/frontend",
+            "sourceMapPathOverrides": {
+                "webpack:///src/*": "${webRoot}/src/*"
+            },
+            "runtimeArgs": [
+                "--remote-debugging-port=9222"
+            ]
+        },
+        {
+            "type": "python",
+            "request": "launch",
+            "name": "后端调试",
+            "program": "${workspaceFolder}/backend/app.py",
+            "console": "integratedTerminal"
+        }
+    ]
+}

@@ -24,23 +24,24 @@
           ></el-input>
         </el-form-item>
         
-        <el-form-item label="脚本文件" prop="file" v-if="!isEdit">
-          <el-upload
-            class="upload-demo"
-            ref="upload"
-            action="#"
-            :http-request="handleUpload"
-            :before-upload="beforeUpload"
-            :limit="1"
-            :on-exceed="handleExceed"
-            :file-list="fileList"
-          >
-            <el-button size="small" type="primary">选择文件</el-button>
-            <div slot="tip" class="el-upload__tip">
-              支持上传 Python(.py), Shell(.sh), Batch(.bat), PowerShell(.ps1), JavaScript(.js) 文件
-            </div>
-          </el-upload>
-        </el-form-item>
+      <el-form-item label="脚本文件" v-if="!isEdit">
+        <el-upload
+          class="upload-demo"
+          ref="upload"
+          action="#"
+          :auto-upload="false"
+          :before-upload="beforeUpload"
+          :limit="1"
+          :on-exceed="handleExceed"
+          :on-change="handleFileChange"
+          :file-list="fileList"
+        >
+          <el-button size="small" type="primary">选择文件</el-button>
+          <div slot="tip" class="el-upload__tip">
+            支持上传 Python(.py), Shell(.sh), Batch(.bat), PowerShell(.ps1), JavaScript(.js) 文件
+          </div>
+        </el-upload>
+      </el-form-item>
         
         <el-form-item label="参数配置">
           <div class="parameters-header">
@@ -125,16 +126,12 @@ export default {
         name: [
           { required: true, message: '请输入脚本名称', trigger: 'blur' },
           { min: 2, max: 50, message: '长度在 2 到 50 个字符', trigger: 'blur' }
-        ],
-        file: [
-          { required: true, message: '请上传脚本文件', trigger: 'change' }
         ]
       },
       fileList: [],
       loading: false,
       submitting: false,
       uploadFile: null,
-      uploadedFileInfo: null,
       uploading: false
     };
   },
@@ -201,39 +198,18 @@ export default {
       }
       
       this.uploadFile = file;
+      // 更新文件列表，以便在UI上显示已选择的文件
+      this.fileList = [{name: file.name, url: ''}];
       return true;
     },
     handleExceed() {
       this.$message.warning('只能上传一个文件');
     },
-    handleUpload(options) {
-      // 选择文件后，立即上传文件
-      const formData = new FormData();
-      formData.append('file', options.file);
-      
-      this.uploading = true;
-      
-      this.$axios.post('/api/scripts/upload-file', formData)
-        .then(response => {
-          if (response.data.code === 0) {
-            this.uploadedFileInfo = response.data.data;
-            this.$message.success('文件上传成功');
-            return { status: true };
-          } else {
-            this.$message.error(response.data.message || '上传文件失败');
-            return { status: false };
-          }
-        })
-        .catch(error => {
-          this.$message.error('上传文件失败: ' + error.message);
-          return { status: false };
-        })
-        .finally(() => {
-          this.uploading = false;
-        });
-      
-      // 返回上传状态
-      return { status: true };
+    handleFileChange(file) {
+      // 文件选择变化时设置uploadFile
+      if (file && file.raw) {
+        this.uploadFile = file.raw;
+      }
     },
     submitForm() {
       this.$refs.form.validate(valid => {
@@ -261,24 +237,21 @@ export default {
       });
     },
     addScript() {
-      // 检查是否有上传的文件信息
-      if (!this.uploadedFileInfo) {
-        this.$message.error('请先选择并上传脚本文件');
+      // 检查是否有选择文件
+      if (this.uploadFile == null) {
+        this.$message.error('请先选择脚本文件');
         this.submitting = false;
         return;
       }
       
-      // 使用已上传文件的信息
-      const data = {
-        name: this.form.name,
-        description: this.form.description,
-        file_path: this.uploadedFileInfo.file_path,
-        file_type: this.uploadedFileInfo.file_type,
-        parameters: this.form.parameters
-      };
+      const formData = new FormData();
+      formData.append('file', this.uploadFile);
+      formData.append('name', this.form.name);
+      formData.append('description', this.form.description);
+      formData.append('parameters', JSON.stringify(this.form.parameters));
       
-      // 发送请求 - 传递脚本信息和文件ID
-      this.$axios.post('/api/scripts', data)
+      // 发送请求 - 同时上传文件和保存脚本信息
+      this.$axios.post('/api/scripts/with-file', formData)
         .then(response => {
           if (response.data.code === 0) {
             this.$message.success('添加脚本成功');

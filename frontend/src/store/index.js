@@ -112,6 +112,68 @@ export default new Vuex.Store({
       } finally {
         commit('setLoading', false);
       }
+    },
+    
+    // 获取脚本版本历史
+    async fetchScriptVersions({ commit }, scriptId) {
+      commit('setLoading', true);
+      commit('setError', null);
+      try {
+        const response = await axios.get(`/api/scripts/${scriptId}/versions`);
+        return response.data;
+      } catch (error) {
+        commit('setError', error.message);
+        throw error;
+      } finally {
+        commit('setLoading', false);
+      }
+    },
+    
+    // 获取版本内容
+    async fetchVersionContent({ commit }, { scriptId, versionId }) {
+      commit('setLoading', true);
+      commit('setError', null);
+      try {
+        const response = await axios.get(`/api/scripts/${scriptId}/versions/${versionId}/content`);
+        return response.data;
+      } catch (error) {
+        commit('setError', error.message);
+        throw error;
+      } finally {
+        commit('setLoading', false);
+      }
+    },
+    
+    // 比较版本差异
+    async compareVersions({ commit }, { scriptId, versionId1, versionId2 }) {
+      commit('setLoading', true);
+      commit('setError', null);
+      try {
+        const response = await axios.get(`/api/scripts/${scriptId}/versions/compare/html`, {
+          params: { version_id1: versionId1, version_id2: versionId2 }
+        });
+        return response.data;
+      } catch (error) {
+        commit('setError', error.message);
+        throw error;
+      } finally {
+        commit('setLoading', false);
+      }
+    },
+    
+    // 回滚到指定版本
+    async rollbackVersion({ commit }, { scriptId, versionId }) {
+      commit('setLoading', true);
+      commit('setError', null);
+      try {
+        const response = await axios.put(`/api/scripts/${scriptId}/versions/${versionId}/rollback`);
+        return response.data;
+      } catch (error) {
+        commit('setError', error.message);
+        throw error;
+      } finally {
+        commit('setLoading', false);
+      }
     }
   },
   getters: {

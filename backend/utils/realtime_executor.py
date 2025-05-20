@@ -10,7 +10,8 @@ import time
 import threading
 import subprocess
 from models import ExecutionHistory
-from config import logger
+from config import logger, USE_DOCKER
+from .docker_executor import DockerExecutor
 
 class RealtimeExecutor:
     """实时执行器，支持实时更新执行状态"""
@@ -76,23 +77,56 @@ class RealtimeExecutor:
                 ExecutionHistory.update(self.history_id, "failed", None, "创建参数文件失败")
                 return
             
-            # 根据脚本类型执行不同的命令
-            if ext == 'py':
-                cmd = [sys.executable, self.script_path, params_file]
-            elif ext in ['sh', 'bash']:
-                cmd = ['bash', self.script_path, params_file]
-            elif ext == 'bat':
-                cmd = [self.script_path, params_file]
-            elif ext == 'ps1':
-                cmd = ['powershell', '-ExecutionPolicy', 'Bypass', '-File', self.script_path, params_file]
-            elif ext == 'js':
-                cmd = ['node', self.script_path, params_file]
+            # 确定是否使用Docker执行
+            if USE_DOCKER:
+                # 使用Docker执行脚本
+                self.output_buffer.append("正在使用Docker容器执行脚本...")
+                ExecutionHistory.update_progress(
+                    self.history_id, 
+                    "\n".join(self.output_buffer), 
+                    "\n".join(self.error_buffer)
+                )
+                
+                # 开始执行Docker命令
+                success, output, error = DockerExecutor.run_script_in_docker(
+                    self.script_path, 
+                    self.params
+                )
+                
+                # 更新输出和错误缓冲区
+                if output:
+                    self.output_buffer.extend(output.splitlines())
+                if error:
+                    self.error_buffer.extend(error.splitlines())
+                
+                # 更新执行历史
+                status = "completed" if success else "failed"
+                ExecutionHistory.update(
+                    self.history_id, 
+                    status, 
+                    "\n".join(self.output_buffer), 
+                    "\n".join(self.error_buffer) if error else None
+                )
+                
             else:
-                ExecutionHistory.update(self.history_id, "failed", None, f"不支持的脚本类型: {ext}")
-                return
-            
-            # 开始执行命令
-            self._start_process(cmd)
+                # 直接在主机上执行
+                # 根据脚本类型执行不同的命令
+                if ext == 'py':
+                    cmd = [sys.executable, self.script_path, params_file]
+                elif ext in ['sh', 'bash']:
+                    cmd = ['bash', self.script_path, params_file]
+                elif ext == 'bat':
+                    cmd = [self.script_path, params_file]
+                elif ext == 'ps1':
+                    cmd = ['powershell', '-ExecutionPolicy', 'Bypass', '-File', self.script_path, params_file]
+                elif ext == 'js':
+                    cmd = ['node', self.script_path, params_file]
+                else:
+                    ExecutionHistory.update(self.history_id, "failed", None, f"不支持的脚本类型: {ext}")
+                    return
+                
+                # 开始执行命令
+                self._start_process(cmd)
             
             # 清理临时文件
             try:
@@ -109,112 +143,194 @@ class RealtimeExecutor:
             outputs = {}
             prev_output = None
             
-            for i, node in enumerate(self.chain_nodes):
-                if self.stopped:
-                    break
-                    
-                script_id = node['script_id']
-                script_path = node['file_path']
-                node_name = node.get('script_name', f'节点{i+1}')
-                
-                # 更新执行进度
-                progress_msg = f"正在执行节点 {i+1}/{len(self.chain_nodes)}: {node_name}"
-                current_output = "\n".join(self.output_buffer)
-                current_error = "\n".join(self.error_buffer)
+            # 确定是否使用Docker执行
+            if USE_DOCKER:
+                # 使用Docker执行脚本链
+                self.output_buffer.append("正在使用Docker容器执行脚本链...")
                 ExecutionHistory.update_progress(
                     self.history_id, 
-                    f"{current_output}\n{progress_msg}", 
-                    current_error
+                    "\n".join(self.output_buffer), 
+                    "\n".join(self.error_buffer)
                 )
                 
-                # 准备节点参数
-                node_params = self.params.copy() if self.params else {}
-                if prev_output is not None:
-                    node_params['__prev_output'] = prev_output
-                
-                # 准备参数文件
-                params_file = self._write_params_file(node_params)
-                if not params_file:
-                    self.error_buffer.append(f"节点 {i+1} 创建参数文件失败")
-                    ExecutionHistory.update(
+                for i, node in enumerate(self.chain_nodes):
+                    if self.stopped:
+                        break
+                        
+                    script_id = node['script_id']
+                    script_path = node['file_path']
+                    node_name = node.get('script_name', f'节点{i+1}')
+                    
+                    # 更新执行进度
+                    progress_msg = f"正在执行节点 {i+1}/{len(self.chain_nodes)}: {node_name}"
+                    current_output = "\n".join(self.output_buffer)
+                    current_error = "\n".join(self.error_buffer)
+                    ExecutionHistory.update_progress(
                         self.history_id, 
-                        "failed", 
-                        "\n".join(self.output_buffer), 
-                        "\n".join(self.error_buffer)
+                        f"{current_output}\n{progress_msg}", 
+                        current_error
                     )
-                    return
-                
-                # 获取脚本文件扩展名
-                _, ext = os.path.splitext(script_path)
-                ext = ext.lstrip('.').lower()
-                
-                # 构建命令
-                if ext == 'py':
-                    cmd = [sys.executable, script_path, params_file]
-                elif ext in ['sh', 'bash']:
-                    cmd = ['bash', script_path, params_file]
-                elif ext == 'bat':
-                    cmd = [script_path, params_file]
-                elif ext == 'ps1':
-                    cmd = ['powershell', '-ExecutionPolicy', 'Bypass', '-File', script_path, params_file]
-                elif ext == 'js':
-                    cmd = ['node', script_path, params_file]
-                else:
-                    self.error_buffer.append(f"节点 {i+1} 不支持的脚本类型: {ext}")
-                    ExecutionHistory.update(
-                        self.history_id, 
-                        "failed", 
-                        "\n".join(self.output_buffer), 
-                        "\n".join(self.error_buffer)
+                    
+                    # 准备节点参数
+                    node_params = self.params.copy() if self.params else {}
+                    if prev_output is not None:
+                        node_params['__prev_output'] = prev_output
+                    
+                    # 在Docker中执行单个节点
+                    self.output_buffer.append(f"\n--- 在Docker容器中执行节点 {i+1}/{len(self.chain_nodes)}: {node_name} ---\n")
+                    
+                    # 执行脚本
+                    success, output, error = DockerExecutor.run_script_in_docker(
+                        script_path, 
+                        node_params, 
+                        prev_output
                     )
-                    return
+                    
+                    # 保存节点执行结果
+                    node_result = {
+                        'output': output or "",
+                        'error': error or "",
+                        'success': success
+                    }
+                    outputs[script_id] = node_result
+                    
+                    # 更新输出缓冲区
+                    if output:
+                        self.output_buffer.extend(output.splitlines())
+                    if error:
+                        self.error_buffer.extend(error.splitlines())
+                    
+                    # 如果节点执行失败，终止链执行
+                    if not success:
+                        self.error_buffer.append(f"节点 {i+1} 执行失败: {error}")
+                        ExecutionHistory.update(
+                            self.history_id, 
+                            "failed", 
+                            json.dumps(outputs), 
+                            f"节点 {i+1} 执行失败: {error}"
+                        )
+                        return
+                    
+                    # 保存输出用于下一个节点
+                    prev_output = output
                 
-                # 执行节点命令
-                self.output_buffer.append(f"\n--- 执行节点 {i+1}/{len(self.chain_nodes)}: {node_name} ---\n")
-                
-                # 重置节点输出和错误缓冲区
-                node_output = []
-                node_error = []
-                
-                # 开始进程
-                success = self._start_process(cmd, node_output, node_error)
-                
-                # 清理参数文件
-                try:
-                    os.unlink(params_file)
-                except:
-                    pass
-                
-                # 保存节点执行结果
-                node_result = {
-                    'output': "\n".join(node_output),
-                    'error': "\n".join(node_error),
-                    'success': success
-                }
-                outputs[script_id] = node_result
-                
-                # 如果节点执行失败，终止链执行
-                if not success:
-                    self.error_buffer.append(f"节点 {i+1} 执行失败: {node_result['error']}")
+                # 链执行完成
+                if not self.stopped:
                     ExecutionHistory.update(
                         self.history_id, 
-                        "failed", 
+                        "completed", 
                         json.dumps(outputs), 
-                        f"节点 {i+1} 执行失败: {node_result['error']}"
+                        None
                     )
-                    return
                 
-                # 保存输出用于下一个节点
-                prev_output = node_result['output']
-            
-            # 链执行完成
-            if not self.stopped:
-                ExecutionHistory.update(
-                    self.history_id, 
-                    "completed", 
-                    json.dumps(outputs), 
-                    None
-                )
+            else:
+                # 直接在主机上执行脚本链
+                for i, node in enumerate(self.chain_nodes):
+                    if self.stopped:
+                        break
+                        
+                    script_id = node['script_id']
+                    script_path = node['file_path']
+                    node_name = node.get('script_name', f'节点{i+1}')
+                    
+                    # 更新执行进度
+                    progress_msg = f"正在执行节点 {i+1}/{len(self.chain_nodes)}: {node_name}"
+                    current_output = "\n".join(self.output_buffer)
+                    current_error = "\n".join(self.error_buffer)
+                    ExecutionHistory.update_progress(
+                        self.history_id, 
+                        f"{current_output}\n{progress_msg}", 
+                        current_error
+                    )
+                    
+                    # 准备节点参数
+                    node_params = self.params.copy() if self.params else {}
+                    if prev_output is not None:
+                        node_params['__prev_output'] = prev_output
+                    
+                    # 准备参数文件
+                    params_file = self._write_params_file(node_params)
+                    if not params_file:
+                        self.error_buffer.append(f"节点 {i+1} 创建参数文件失败")
+                        ExecutionHistory.update(
+                            self.history_id, 
+                            "failed", 
+                            "\n".join(self.output_buffer), 
+                            "\n".join(self.error_buffer)
+                        )
+                        return
+                    
+                    # 获取脚本文件扩展名
+                    _, ext = os.path.splitext(script_path)
+                    ext = ext.lstrip('.').lower()
+                    
+                    # 构建命令
+                    if ext == 'py':
+                        cmd = [sys.executable, script_path, params_file]
+                    elif ext in ['sh', 'bash']:
+                        cmd = ['bash', script_path, params_file]
+                    elif ext == 'bat':
+                        cmd = [script_path, params_file]
+                    elif ext == 'ps1':
+                        cmd = ['powershell', '-ExecutionPolicy', 'Bypass', '-File', script_path, params_file]
+                    elif ext == 'js':
+                        cmd = ['node', script_path, params_file]
+                    else:
+                        self.error_buffer.append(f"节点 {i+1} 不支持的脚本类型: {ext}")
+                        ExecutionHistory.update(
+                            self.history_id, 
+                            "failed", 
+                            "\n".join(self.output_buffer), 
+                            "\n".join(self.error_buffer)
+                        )
+                        return
+                    
+                    # 执行节点命令
+                    self.output_buffer.append(f"\n--- 执行节点 {i+1}/{len(self.chain_nodes)}: {node_name} ---\n")
+                    
+                    # 重置节点输出和错误缓冲区
+                    node_output = []
+                    node_error = []
+                    
+                    # 开始进程
+                    success = self._start_process(cmd, node_output, node_error)
+                    
+                    # 清理参数文件
+                    try:
+                        os.unlink(params_file)
+                    except:
+                        pass
+                    
+                    # 保存节点执行结果
+                    node_result = {
+                        'output': "\n".join(node_output),
+                        'error': "\n".join(node_error),
+                        'success': success
+                    }
+                    outputs[script_id] = node_result
+                    
+                    # 如果节点执行失败，终止链执行
+                    if not success:
+                        self.error_buffer.append(f"节点 {i+1} 执行失败: {node_result['error']}")
+                        ExecutionHistory.update(
+                            self.history_id, 
+                            "failed", 
+                            json.dumps(outputs), 
+                            f"节点 {i+1} 执行失败: {node_result['error']}"
+                        )
+                        return
+                    
+                    # 保存输出用于下一个节点
+                    prev_output = node_result['output']
+                
+                # 链执行完成
+                if not self.stopped:
+                    ExecutionHistory.update(
+                        self.history_id, 
+                        "completed", 
+                        json.dumps(outputs), 
+                        None
+                    )
             
         except Exception as e:
             ExecutionHistory.update(

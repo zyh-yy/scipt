@@ -7,6 +7,18 @@
           <el-button @click="$router.push('/scripts')">
             <i class="el-icon-back"></i> 返回列表
           </el-button>
+          <el-button type="primary" @click="handleExecute">
+            <i class="el-icon-video-play"></i> 执行脚本
+          </el-button>
+          <el-button type="success" @click="handleEdit">
+            <i class="el-icon-edit"></i> 编辑脚本
+          </el-button>
+          <el-button @click="showVersionHistory">
+            <i class="el-icon-time"></i> 版本历史
+          </el-button>
+          <el-button type="danger" @click="handleDelete">
+            <i class="el-icon-delete"></i> 删除脚本
+          </el-button>
         </div>
       </div>
       
@@ -65,15 +77,30 @@
     
     <!-- 执行脚本对话框 -->
     <el-dialog title="执行脚本" :visible.sync="executeDialogVisible" width="50%">
-      <div v-if="script && script.parameters && script.parameters.length">
+      <div>
         <el-form ref="executeForm" :model="executeParams" label-width="100px">
-          <el-form-item 
-            v-for="param in script.parameters" 
-            :key="param.id"
-            :label="param.name"
-            :prop="param.name"
-            :required="param.is_required === 1"
-          >
+          <!-- Docker执行选项 -->
+          <el-form-item label="执行方式">
+            <el-switch
+              v-model="useDocker"
+              active-text="Docker容器"
+              inactive-text="本地执行"
+              active-color="#13ce66"
+            ></el-switch>
+            <div class="execution-mode-desc">
+              <small>{{ useDocker ? '在Docker容器中隔离执行脚本' : '直接在主机上执行脚本' }}</small>
+            </div>
+          </el-form-item>
+          
+          <!-- 脚本参数 -->
+          <template v-if="script && script.parameters && script.parameters.length">
+            <el-form-item 
+              v-for="param in script.parameters" 
+              :key="param.id"
+              :label="param.name"
+              :prop="param.name"
+              :required="param.is_required === 1"
+            >
             <el-input 
               v-if="param.param_type === 'string'" 
               v-model="executeParams[param.name]"
@@ -100,11 +127,12 @@
               v-else-if="param.param_type === 'boolean'"
               v-model="executeParams[param.name]"
             ></el-switch>
-          </el-form-item>
+            </el-form-item>
+          </template>
+          <div v-else>
+            <p>该脚本没有需要配置的参数</p>
+          </div>
         </el-form>
-      </div>
-      <div v-else>
-        <p>该脚本没有需要配置的参数</p>
       </div>
       <div slot="footer" class="dialog-footer">
         <el-button @click="executeDialogVisible = false">取消</el-button>
@@ -145,6 +173,76 @@
         </el-button>
       </div>
     </el-dialog>
+
+    <!-- 版本历史对话框 -->
+    <el-dialog title="脚本版本历史" :visible.sync="versionDialogVisible" width="70%">
+      <el-table 
+        :data="versionHistory" 
+        border
+        v-loading="versionLoading"
+        @row-click="selectVersion"
+        highlight-current-row>
+        <el-table-column prop="version" label="版本号" width="120"></el-table-column>
+        <el-table-column prop="created_at" label="创建时间" width="180">
+          <template slot-scope="scope">
+            {{ formatTime(scope.row.created_at) }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="description" label="描述" min-width="200"></el-table-column>
+        <el-table-column prop="is_current" label="当前版本" width="100">
+          <template slot-scope="scope">
+            <el-tag type="success" v-if="scope.row.is_current === 1">当前</el-tag>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="220" fixed="right">
+          <template slot-scope="scope">
+            <el-button 
+              type="text" 
+              size="small" 
+              @click.stop="viewVersionContent(scope.row)"
+            >查看</el-button>
+            <el-button 
+              type="text" 
+              size="small" 
+              @click.stop="compareWithSelected(scope.row)"
+              :disabled="!selectedVersion || selectedVersion.id === scope.row.id"
+            >比较</el-button>
+            <el-button 
+              type="text" 
+              size="small" 
+              @click.stop="rollbackToVersion(scope.row)"
+              :disabled="scope.row.is_current === 1"
+            >回滚</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="versionDialogVisible = false">关闭</el-button>
+      </div>
+    </el-dialog>
+
+    <!-- 版本内容对话框 -->
+    <el-dialog :title="versionContentTitle" :visible.sync="contentDialogVisible" width="80%" custom-class="version-content-dialog">
+      <div v-loading="contentLoading">
+        <pre class="version-content" v-if="versionContent">{{ versionContent }}</pre>
+      </div>
+    </el-dialog>
+
+    <!-- 版本比较对话框 -->
+    <el-dialog title="版本比较" :visible.sync="compareDialogVisible" width="90%" custom-class="version-compare-dialog">
+      <div v-loading="compareLoading">
+        <div class="version-compare-info" v-if="compareResult">
+          <div>
+            <strong>版本 1:</strong> {{ compareResult.version1.version }} ({{ formatTime(compareResult.version1.created_at) }})
+          </div>
+          <div>
+            <strong>版本 2:</strong> {{ compareResult.version2.version }} ({{ formatTime(compareResult.version2.created_at) }})
+          </div>
+        </div>
+        <div class="version-compare-content" v-if="compareResult && compareResult.diff_html" v-html="compareResult.diff_html"></div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -165,7 +263,25 @@ export default {
       resultDialogVisible: false,
       executeParams: {},
       executing: false,
-      executeResult: null
+      executeResult: null,
+      useDocker: true, // 默认使用Docker执行
+      
+      // 版本历史相关
+      versionDialogVisible: false,
+      versionHistory: [],
+      versionLoading: false,
+      selectedVersion: null,
+      
+      // 版本内容相关
+      contentDialogVisible: false,
+      versionContent: null,
+      contentLoading: false,
+      versionContentTitle: "版本内容",
+      
+      // 版本比较相关
+      compareDialogVisible: false,
+      compareLoading: false,
+      compareResult: null
     };
   },
   created() {
@@ -272,26 +388,30 @@ export default {
     confirmExecute() {
       this.executing = true;
       this.executeDialogVisible = false;
-      this.resultDialogVisible = true;
-      this.executeResult = null;
+      
+      // 添加执行方式参数
+      const params = {
+        ...this.executeParams,
+        use_docker: this.useDocker
+      };
       
       this.$store.dispatch('executeScript', {
         scriptId: this.scriptId,
-        params: this.executeParams
+        params: params
       }).then(result => {
-        this.executeResult = {
-          success: result.code === 0,
-          message: result.message,
-          output: result.data && result.data.output,
-          error: result.data && result.data.error,
-          history_id: result.data && result.data.history_id
-        };
+        if (result.code === 0) {
+          // 提交成功，显示提示
+          this.$message.success('脚本执行请求已提交，请在执行记录中查看结果');
+          
+          // 可选：导航到执行历史详情页
+          if (result.data && result.data.history_id) {
+            this.$router.push(`/history/${result.data.history_id}`);
+          }
+        } else {
+          this.$message.error(result.message || '提交执行请求失败');
+        }
       }).catch(error => {
-        this.executeResult = {
-          success: false,
-          message: '执行请求失败',
-          error: error.message
-        };
+        this.$message.error('提交执行请求失败: ' + error.message);
       }).finally(() => {
         this.executing = false;
       });
@@ -301,6 +421,119 @@ export default {
         this.$router.push(`/history/${this.executeResult.history_id}`);
         this.resultDialogVisible = false;
       }
+    },
+    
+    // 版本历史相关方法
+    showVersionHistory() {
+      this.versionDialogVisible = true;
+      this.fetchVersionHistory();
+    },
+    
+    fetchVersionHistory() {
+      this.versionLoading = true;
+      this.$store.dispatch('fetchScriptVersions', this.scriptId)
+        .then(response => {
+          if (response.code === 0) {
+            this.versionHistory = response.data;
+          } else {
+            this.$message.error(response.message || '获取版本历史失败');
+          }
+        })
+        .catch(error => {
+          this.$message.error('获取版本历史失败: ' + error.message);
+        })
+        .finally(() => {
+          this.versionLoading = false;
+        });
+    },
+    
+    selectVersion(row) {
+      this.selectedVersion = row;
+    },
+    
+    viewVersionContent(version) {
+      this.contentLoading = true;
+      this.contentDialogVisible = true;
+      this.versionContentTitle = `版本 ${version.version} (${this.formatTime(version.created_at)})`;
+      
+      this.$store.dispatch('fetchVersionContent', {
+        scriptId: this.scriptId,
+        versionId: version.id
+      })
+        .then(response => {
+          if (response.code === 0) {
+            this.versionContent = response.data.content;
+          } else {
+            this.$message.error(response.message || '获取版本内容失败');
+          }
+        })
+        .catch(error => {
+          this.$message.error('获取版本内容失败: ' + error.message);
+        })
+        .finally(() => {
+          this.contentLoading = false;
+        });
+    },
+    
+    compareWithSelected(version) {
+      if (!this.selectedVersion || this.selectedVersion.id === version.id) {
+        this.$message.warning('请先选择一个不同的版本进行比较');
+        return;
+      }
+      
+      this.compareLoading = true;
+      this.compareDialogVisible = true;
+      
+      this.$store.dispatch('compareVersions', {
+        scriptId: this.scriptId,
+        versionId1: this.selectedVersion.id,
+        versionId2: version.id
+      })
+        .then(response => {
+          if (response.code === 0) {
+            this.compareResult = response.data;
+          } else {
+            this.$message.error(response.message || '比较版本失败');
+          }
+        })
+        .catch(error => {
+          this.$message.error('比较版本失败: ' + error.message);
+        })
+        .finally(() => {
+          this.compareLoading = false;
+        });
+    },
+    
+    rollbackToVersion(version) {
+      if (version.is_current === 1) {
+        this.$message.info('该版本已经是当前版本');
+        return;
+      }
+      
+      this.$confirm(`确定要回滚到版本 ${version.version} 吗?`, '回滚确认', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        this.$store.dispatch('rollbackVersion', {
+          scriptId: this.scriptId,
+          versionId: version.id
+        })
+          .then(response => {
+            if (response.code === 0) {
+              this.$message.success('回滚成功');
+              this.fetchScriptDetail();
+              this.fetchVersionHistory();
+            } else {
+              this.$message.error(response.message || '回滚失败');
+            }
+          })
+          .catch(error => {
+            this.$message.error('回滚失败: ' + error.message);
+          });
+      }).catch(() => {
+        this.$message.info('已取消回滚');
+      });
     }
   }
 };
@@ -349,5 +582,68 @@ export default {
 .result-error pre {
   background-color: #fef0f0;
   border-color: #fbc4c4;
+}
+
+/* 版本历史和比较相关样式 */
+.version-content {
+  background-color: #f5f7fa;
+  border: 1px solid #e6e6e6;
+  border-radius: 4px;
+  padding: 15px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-height: 500px;
+  overflow-y: auto;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.version-compare-info {
+  margin-bottom: 15px;
+  padding: 10px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
+}
+
+.version-compare-content {
+  border: 1px solid #e6e6e6;
+  border-radius: 4px;
+  padding: 0;
+  overflow-x: auto;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+/* 覆盖difflib生成的HTML表格样式 */
+:deep(.version-compare-content table) {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+:deep(.version-compare-content td) {
+  padding: 2px 5px;
+  white-space: pre-wrap;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+:deep(.version-compare-content .diff_add) {
+  background-color: #e6ffed;
+}
+
+:deep(.version-compare-content .diff_chg) {
+  background-color: #fff5b1;
+}
+
+:deep(.version-compare-content .diff_sub) {
+  background-color: #ffdce0;
+}
+
+.button-container {
+  display: flex;
+  gap: 10px;
 }
 </style>

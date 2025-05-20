@@ -28,6 +28,9 @@ def execute_script(script_id):
         # 获取参数
         params = request.json or {}
         
+        # 获取执行方式，是否使用Docker
+        use_docker = params.pop('use_docker', None)  # 从参数中移除use_docker，避免传递给脚本
+        
         # 验证必填参数
         if script.get('parameters'):
             for param in script['parameters']:
@@ -56,22 +59,26 @@ def execute_script(script_id):
                 'data': None
             }), 500
         
-        # 执行脚本
-        file_path = script['file_path']
-        success, output, error = ScriptRunner.run_script(file_path, params)
+        # 使用RealtimeExecutor异步执行
+        from utils.realtime_executor import RealtimeExecutor
+        executor = RealtimeExecutor(history_id, script_path=script['file_path'], params=params)
+        success = executor.execute()
         
-        # 更新执行历史记录
-        status = "completed" if success else "failed"
-        ExecutionHistory.update(history_id, status, output, error)
+        if not success:
+            return jsonify({
+                'code': 500,
+                'message': '启动脚本执行失败',
+                'data': {
+                    'history_id': history_id
+                }
+            }), 500
         
+        # 立即返回执行ID，不等待执行完成
         return jsonify({
-            'code': 0 if success else 500,
-            'message': '脚本执行成功' if success else f'脚本执行失败: {error}',
+            'code': 0,
+            'message': '脚本执行请求已提交',
             'data': {
-                'history_id': history_id,
-                'success': success,
-                'output': output,
-                'error': error
+                'history_id': history_id
             }
         })
     except Exception as e:
@@ -117,6 +124,9 @@ def execute_chain(chain_id):
         # 获取参数
         params = request.json or {}
         
+        # 获取执行方式，是否使用Docker
+        use_docker = params.pop('use_docker', None)  # 从参数中移除use_docker，避免传递给脚本
+        
         # 创建执行历史记录
         history_id = ExecutionHistory.add(
             chain_id=chain_id,
@@ -157,26 +167,26 @@ def execute_chain(chain_id):
             # 添加文件路径到节点
             node['file_path'] = scripts[script_id]['file_path']
         
-        # 执行脚本链
-        success, outputs, error = ScriptRunner.run_script_chain(nodes, params)
+        # 使用RealtimeExecutor异步执行脚本链
+        from utils.realtime_executor import RealtimeExecutor
+        executor = RealtimeExecutor(history_id, chain_nodes=nodes, params=params)
+        success = executor.execute()
         
-        # 更新执行历史记录
-        status = "completed" if success else "failed"
-        ExecutionHistory.update(
-            history_id, 
-            status, 
-            json.dumps(outputs) if success else None, 
-            error
-        )
+        if not success:
+            return jsonify({
+                'code': 500,
+                'message': '启动脚本链执行失败',
+                'data': {
+                    'history_id': history_id
+                }
+            }), 500
         
+        # 立即返回执行ID，不等待执行完成
         return jsonify({
-            'code': 0 if success else 500,
-            'message': '脚本链执行成功' if success else f'脚本链执行失败: {error}',
+            'code': 0,
+            'message': '脚本链执行请求已提交',
             'data': {
-                'history_id': history_id,
-                'success': success,
-                'outputs': outputs,
-                'error': error
+                'history_id': history_id
             }
         })
     except Exception as e:

@@ -1,0 +1,6 @@
+2025/05/20-00:13:26.902 a984 Reusing MANIFEST C:\Users\zhuyu\Desktop\study\lijialu\scipt\.vscode\edge-debug-profile\Default\EdgeCoupons/coupons_data.db/MANIFEST-000001
+2025/05/20-00:13:26.903 a984 Recovering log #3
+2025/05/20-00:13:26.904 a984 Reusing old log C:\Users\zhuyu\Desktop\study\lijialu\scipt\.vscode\edge-debug-profile\Default\EdgeCoupons/coupons_data.db/000003.log 
+2025/05/20-00:13:27.052 db04 Level-0 table #5: started
+2025/05/20-00:13:27.055 db04 Level-0 table #5: 670832 bytes OK
+2025/05/20-00:13:27.057 db04 Delete type=0 #3

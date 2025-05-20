@@ -5,7 +5,12 @@
 """
 import datetime
 import json
+import os
+import sys
 from .base import DBManager
+
+# Use the same approach for importing config as in base.py
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import logger
 
 class ScriptChain:
