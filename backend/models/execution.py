@@ -79,15 +79,16 @@ class AlertHandler:
             if alert_config['notification_type'] == 'email':
                 # 发送邮件告警
                 notification_config = alert_config['notification_config']
-                recipients = notification_config.get('recipients', [])
+                # 获取收件人，如果未配置则使用None（这样会使用默认收件人）
+                recipients = notification_config.get('recipients') if notification_config else None
                 
                 from services.email_service import EmailService
                 email_service = EmailService()
                 success = email_service.send_email(recipients, subject, content)
                 
                 # 记录告警历史
-                status = "sent" if success else "failed"
-                AlertHistory.add(alert_config['id'], execution['id'], status, message)
+                alert_status = "sent" if success else "failed"
+                AlertHistory.add(alert_config['id'], execution['id'], alert_status, message)
                 
                 return success
             
@@ -319,9 +320,32 @@ class ExecutionHistory:
     def get_statistics(period='day', start_date=None, end_date=None, script_id=None, chain_id=None):
         """获取执行统计数据"""
         try:
+            logger.info(f"获取执行统计数据: period={period}, start_date={start_date}, end_date={end_date}, script_id={script_id}, chain_id={chain_id}")
+            
             conn = DBManager.get_connection()
             conn.row_factory = DBManager.dict_factory
             cursor = conn.cursor()
+            
+            # 检查特定脚本或脚本链的执行历史记录
+            count_query = "SELECT COUNT(*) as count FROM execution_history WHERE 1=1"
+            count_params = []
+            
+            if script_id:
+                count_query += " AND script_id = ?"
+                count_params.append(script_id)
+            
+            if chain_id:
+                count_query += " AND chain_id = ?"
+                count_params.append(chain_id)
+            
+            cursor.execute(count_query, count_params)
+            count_result = cursor.fetchone()
+            specific_records = count_result['count'] if count_result else 0
+            logger.info(f"符合条件的执行历史记录总数: {specific_records}")
+            
+            if specific_records == 0:
+                logger.warning("没有符合条件的执行历史记录")
+                return []
             
             # 根据周期确定分组方式
             if period == 'hour':
@@ -339,6 +363,8 @@ class ExecutionHistory:
             else:
                 time_format = '%Y-%m-%d'
                 group_by = "strftime('%Y-%m-%d', start_time)"
+                
+            logger.info(f"使用分组方式: {group_by}")
             
             # 构建查询
             query = f'''
@@ -347,7 +373,7 @@ class ExecutionHistory:
                 COUNT(*) as total_count,
                 SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as success_count,
                 SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed_count,
-                AVG(execution_time) as avg_execution_time
+                CAST(AVG(execution_time) AS REAL) as avg_execution_time
             FROM execution_history
             '''
             
@@ -376,8 +402,53 @@ class ExecutionHistory:
             
             query += f" GROUP BY {group_by} ORDER BY time_period ASC"
             
+            logger.info(f"执行SQL查询: {query}")
+            logger.info(f"查询参数: {params}")
+            
             cursor.execute(query, params)
             stats = cursor.fetchall()
+            
+            logger.info(f"查询返回 {len(stats)} 条统计数据")
+            if len(stats) > 0:
+                logger.info(f"第一条数据示例: {stats[0]}")
+            else:
+                # 如果没有按日期分组的数据，尝试获取总体统计（用于测试）
+                fallback_query = '''
+                SELECT 
+                    'all' as time_period,
+                    COUNT(*) as total_count,
+                    SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as success_count,
+                    SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed_count,
+                    CAST(AVG(execution_time) AS REAL) as avg_execution_time
+                FROM execution_history
+                WHERE 1=1
+                '''
+                
+                fallback_params = []
+                if script_id:
+                    fallback_query += " AND script_id = ?"
+                    fallback_params.append(script_id)
+                
+                if chain_id:
+                    fallback_query += " AND chain_id = ?"
+                    fallback_params.append(chain_id)
+                
+                if start_date:
+                    fallback_query += " AND start_time >= ?"
+                    fallback_params.append(start_date)
+                
+                if end_date:
+                    fallback_query += " AND start_time <= ?"
+                    fallback_params.append(end_date)
+                
+                logger.info(f"尝试使用备用查询: {fallback_query}")
+                logger.info(f"备用查询参数: {fallback_params}")
+                
+                cursor.execute(fallback_query, fallback_params)
+                stats = cursor.fetchall()
+                logger.info(f"备用查询返回 {len(stats)} 条统计数据")
+                if len(stats) > 0:
+                    logger.info(f"备用数据示例: {stats[0]}")
             
             conn.close()
             return stats

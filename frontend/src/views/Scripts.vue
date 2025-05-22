@@ -10,9 +10,38 @@
         </div>
       </div>
 
+      <search-bar 
+        placeholder="搜索脚本名称、描述或ID" 
+        :initial-search-form="searchForm"
+        @search="handleSearch"
+        @reset="resetSearch"
+      >
+        <template v-slot:advanced-fields>
+          <el-form-item label="脚本类型">
+            <el-select v-model="searchForm.file_type" clearable placeholder="选择脚本类型">
+              <el-option label="Python" value="py"></el-option>
+              <el-option label="Shell" value="sh"></el-option>
+              <el-option label="Batch" value="bat"></el-option>
+              <el-option label="PowerShell" value="ps1"></el-option>
+              <el-option label="JavaScript" value="js"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="创建时间">
+            <el-date-picker
+              v-model="searchForm.dateRange"
+              type="daterange"
+              range-separator="至"
+              start-placeholder="开始日期"
+              end-placeholder="结束日期"
+              value-format="yyyy-MM-dd"
+            ></el-date-picker>
+          </el-form-item>
+        </template>
+      </search-bar>
+
       <el-table
         v-loading="loading"
-        :data="scripts"
+        :data="filteredScripts"
         border
         style="width: 100%"
         empty-text="暂无数据"
@@ -154,9 +183,13 @@
 
 <script>
 import { mapState } from 'vuex';
+import SearchBar from '@/components/SearchBar.vue';
 
 export default {
   name: 'Scripts',
+  components: {
+    SearchBar
+  },
   data() {
     return {
       executeDialogVisible: false,
@@ -164,11 +197,57 @@ export default {
       currentScript: null,
       executeParams: {},
       executing: false,
-      executeResult: null
+      executeResult: null,
+      searchForm: {
+        keyword: '',
+        file_type: '',
+        dateRange: []
+      }
     };
   },
   computed: {
-    ...mapState(['scripts', 'loading'])
+    ...mapState(['scripts', 'loading']),
+    filteredScripts() {
+      if (!this.scripts) return [];
+      
+      return this.scripts.filter(script => {
+        // 关键词搜索
+        const keyword = this.searchForm.keyword.toLowerCase();
+        if (keyword) {
+          const scriptId = String(script.id);
+          const name = (script.name || '').toLowerCase();
+          const description = (script.description || '').toLowerCase();
+          
+          if (!scriptId.includes(keyword) && 
+              !name.includes(keyword) && 
+              !description.includes(keyword)) {
+            return false;
+          }
+        }
+        
+        // 脚本类型过滤
+        if (this.searchForm.file_type && script.file_type !== this.searchForm.file_type) {
+          return false;
+        }
+        
+        // 日期范围过滤
+        if (this.searchForm.dateRange && this.searchForm.dateRange.length === 2) {
+          const startDate = new Date(this.searchForm.dateRange[0]);
+          startDate.setHours(0, 0, 0, 0);
+          
+          const endDate = new Date(this.searchForm.dateRange[1]);
+          endDate.setHours(23, 59, 59, 999);
+          
+          const scriptDate = new Date(script.created_at);
+          
+          if (scriptDate < startDate || scriptDate > endDate) {
+            return false;
+          }
+        }
+        
+        return true;
+      });
+    }
   },
   created() {
     this.fetchData();
@@ -176,6 +255,16 @@ export default {
   methods: {
     fetchData() {
       this.$store.dispatch('fetchScripts');
+    },
+    handleSearch(formData) {
+      this.searchForm = { ...formData };
+    },
+    resetSearch() {
+      this.searchForm = {
+        keyword: '',
+        file_type: '',
+        dateRange: []
+      };
     },
     formatTime(time) {
       if (!time) return '-';

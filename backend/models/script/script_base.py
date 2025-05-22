@@ -19,7 +19,7 @@ class Script:
     """脚本模型类"""
     
     @staticmethod
-    def add(name, description, file_path, file_type, url_path=None):
+    def add(name, description, file_path, file_type, url_path=None, output_mode='json'):
         """添加新脚本"""
         try:
             conn = DBManager.get_connection()
@@ -28,15 +28,22 @@ class Script:
             now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             
             cursor.execute('''
-            INSERT INTO scripts (name, description, url_path, file_path, file_type, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (name, description, url_path, file_path, file_type, now, now))
+            INSERT INTO scripts (name, description, url_path, file_path, file_type, output_mode, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (name, description, url_path, file_path, file_type, output_mode, now, now))
             
             script_id = cursor.lastrowid
             
             # 添加初始版本
-            from .script_version import ScriptVersion
-            ScriptVersion.add(script_id, file_path, version="1.0.0", description="初始版本")
+            try:
+                from .script_version import ScriptVersion
+                version_id = ScriptVersion.add(script_id, file_path, version="1.0.0", description="初始版本", force_create=True)
+                if not version_id:
+                    logger.warning(f"添加脚本成功，但创建初始版本失败: 脚本ID {script_id}")
+                else:
+                    logger.info(f"添加脚本初始版本成功: 脚本ID {script_id}, 版本ID {version_id}")
+            except Exception as e:
+                logger.error(f"创建脚本初始版本失败: {str(e)}")
             
             conn.commit()
             conn.close()
@@ -48,7 +55,7 @@ class Script:
             return None
     
     @staticmethod
-    def update(script_id, name=None, description=None, file_path=None, file_type=None, url_path=None):
+    def update(script_id, name=None, description=None, file_path=None, file_type=None, url_path=None, output_mode=None):
         """更新脚本信息"""
         try:
             conn = DBManager.get_connection()
@@ -69,19 +76,20 @@ class Script:
             update_url = url_path if url_path is not None else script.get('url_path')
             update_path = file_path if file_path is not None else script['file_path']
             update_type = file_type if file_type is not None else script['file_type']
+            update_output_mode = output_mode if output_mode is not None else script.get('output_mode', 'json')
             now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             
             cursor.execute('''
             UPDATE scripts
-            SET name = ?, description = ?, url_path = ?, file_path = ?, file_type = ?, updated_at = ?
+            SET name = ?, description = ?, url_path = ?, file_path = ?, file_type = ?, output_mode = ?, updated_at = ?
             WHERE id = ?
-            ''', (update_name, update_desc, update_url, update_path, update_type, now, script_id))
+            ''', (update_name, update_desc, update_url, update_path, update_type, update_output_mode, now, script_id))
             
             # 如果文件路径改变，则添加新版本
             if file_path and file_path != script['file_path']:
                 # 添加新版本
                 from .script_version import ScriptVersion
-                ScriptVersion.add(script_id, file_path, description="更新文件")
+                ScriptVersion.add(script_id, file_path, description="更新文件", force_create=True)
             
             conn.commit()
             conn.close()
@@ -269,4 +277,60 @@ class Script:
             return True
         except Exception as e:
             logger.error(f"设置脚本当前版本失败: {str(e)}")
+            return False
+    
+    @staticmethod
+    def update_parameters(script_id, parameters):
+        """更新脚本参数
+        
+        Args:
+            script_id: 脚本ID
+            parameters: 参数列表，每个参数是一个字典，包含name, description, param_type, is_required, default_value
+            
+        Returns:
+            bool: 成功返回True，失败返回False
+        """
+        try:
+            conn = DBManager.get_connection()
+            conn.row_factory = DBManager.dict_factory
+            cursor = conn.cursor()
+            
+            # 检查脚本是否存在
+            cursor.execute("SELECT * FROM scripts WHERE id = ? AND is_deleted = 0", (script_id,))
+            script = cursor.fetchone()
+            
+            if not script:
+                logger.error(f"更新脚本参数失败: 脚本ID {script_id} 不存在")
+                conn.close()
+                return False
+            
+            # 获取脚本当前的参数
+            cursor.execute("SELECT * FROM script_parameters WHERE script_id = ?", (script_id,))
+            current_params = cursor.fetchall()
+            
+            # 删除所有现有参数
+            cursor.execute("DELETE FROM script_parameters WHERE script_id = ?", (script_id,))
+            
+            # 添加新参数
+            from .script_parameter import ScriptParameter
+            for param in parameters:
+                name = param.get('name', '')
+                description = param.get('description', '')
+                param_type = param.get('param_type', 'string')
+                is_required = int(param.get('is_required', 0))
+                default_value = param.get('default_value', '')
+                
+                cursor.execute('''
+                INSERT INTO script_parameters
+                (script_id, name, description, param_type, is_required, default_value)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ''', (script_id, name, description, param_type, is_required, default_value))
+            
+            conn.commit()
+            conn.close()
+            
+            logger.info(f"更新脚本参数成功: 脚本ID {script_id}")
+            return True
+        except Exception as e:
+            logger.error(f"更新脚本参数失败: {str(e)}")
             return False

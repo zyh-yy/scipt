@@ -10,9 +10,42 @@
         </div>
       </div>
 
+      <search-bar 
+        placeholder="搜索脚本链名称、描述或ID" 
+        :initial-search-form="searchForm"
+        @search="handleSearch"
+        @reset="resetSearch"
+      >
+        <template v-slot:advanced-fields>
+          <el-form-item label="脚本数量">
+            <el-input-number 
+              v-model="searchForm.nodeCountMin" 
+              :min="0" 
+              placeholder="最小脚本数"
+            ></el-input-number>
+            <span class="range-separator">至</span>
+            <el-input-number 
+              v-model="searchForm.nodeCountMax" 
+              :min="0" 
+              placeholder="最大脚本数"
+            ></el-input-number>
+          </el-form-item>
+          <el-form-item label="创建时间">
+            <el-date-picker
+              v-model="searchForm.dateRange"
+              type="daterange"
+              range-separator="至"
+              start-placeholder="开始日期"
+              end-placeholder="结束日期"
+              value-format="yyyy-MM-dd"
+            ></el-date-picker>
+          </el-form-item>
+        </template>
+      </search-bar>
+
       <el-table
         v-loading="loading"
-        :data="chains"
+        :data="filteredChains"
         border
         style="width: 100%"
         empty-text="暂无数据"
@@ -187,9 +220,13 @@
 
 <script>
 import { mapState } from 'vuex';
+import SearchBar from '@/components/SearchBar.vue';
 
 export default {
   name: 'Chains',
+  components: {
+    SearchBar
+  },
   data() {
     return {
       executeDialogVisible: false,
@@ -199,13 +236,64 @@ export default {
       executeParams: {},
       executing: false,
       executeResult: null,
-      allParams: []
+      allParams: [],
+      searchForm: {
+        keyword: '',
+        nodeCountMin: null,
+        nodeCountMax: null,
+        dateRange: []
+      }
     };
   },
   computed: {
     ...mapState(['chains', 'scripts', 'loading']),
     hasRequiredParams() {
       return this.allParams.length > 0;
+    },
+    filteredChains() {
+      if (!this.chains) return [];
+      
+      return this.chains.filter(chain => {
+        // 关键词搜索
+        const keyword = this.searchForm.keyword.toLowerCase();
+        if (keyword) {
+          const chainId = String(chain.id);
+          const name = (chain.name || '').toLowerCase();
+          const description = (chain.description || '').toLowerCase();
+          
+          if (!chainId.includes(keyword) && 
+              !name.includes(keyword) && 
+              !description.includes(keyword)) {
+            return false;
+          }
+        }
+        
+        // 脚本数量过滤
+        const nodeCount = chain.nodes ? chain.nodes.length : 0;
+        if (this.searchForm.nodeCountMin !== null && nodeCount < this.searchForm.nodeCountMin) {
+          return false;
+        }
+        if (this.searchForm.nodeCountMax !== null && nodeCount > this.searchForm.nodeCountMax) {
+          return false;
+        }
+        
+        // 日期范围过滤
+        if (this.searchForm.dateRange && this.searchForm.dateRange.length === 2) {
+          const startDate = new Date(this.searchForm.dateRange[0]);
+          startDate.setHours(0, 0, 0, 0);
+          
+          const endDate = new Date(this.searchForm.dateRange[1]);
+          endDate.setHours(23, 59, 59, 999);
+          
+          const chainDate = new Date(chain.created_at);
+          
+          if (chainDate < startDate || chainDate > endDate) {
+            return false;
+          }
+        }
+        
+        return true;
+      });
     }
   },
   created() {
@@ -215,6 +303,17 @@ export default {
     fetchData() {
       this.$store.dispatch('fetchChains');
       this.$store.dispatch('fetchScripts');
+    },
+    handleSearch(formData) {
+      this.searchForm = { ...formData };
+    },
+    resetSearch() {
+      this.searchForm = {
+        keyword: '',
+        nodeCountMin: null,
+        nodeCountMax: null,
+        dateRange: []
+      };
     },
     formatTime(time) {
       if (!time) return '-';

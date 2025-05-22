@@ -9,6 +9,7 @@ from flask_cors import CORS
 from config import config, logger
 from models import initialize_db
 from routes import script_bp, execution_bp, chain_bp, schedule_bp, alert_bp
+from services import scheduler
 
 def create_app(config_name='default'):
     """创建Flask应用"""
@@ -23,6 +24,9 @@ def create_app(config_name='default'):
     
     # 初始化数据库
     initialize_db()
+    
+    # 启动定时任务调度服务
+    scheduler.start()
     
     # 注册蓝图
     app.register_blueprint(script_bp)

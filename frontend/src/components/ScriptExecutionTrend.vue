@@ -2,7 +2,7 @@
   <div class="script-execution-trend">
     <el-card class="chart-card" v-loading="loading">
       <div slot="header" class="card-header">
-        <h3>脚本执行趋势</h3>
+        <h3>任务执行的时延变化趋势</h3>
         <div class="controls">
           <el-select v-model="selectedScript" size="small" placeholder="选择脚本" clearable @change="fetchTrend">
             <el-option
@@ -19,7 +19,8 @@
           </el-select>
         </div>
       </div>
-      <v-chart class="chart" :option="trendOption" autoresize />
+      <!-- 简化图表容器结构 -->
+      <div id="trend-chart" style="width: 100%; height: 350px;"></div>
     </el-card>
   </div>
 </template>
@@ -27,12 +28,15 @@
 <script>
 import axios from 'axios';
 import { mapState } from 'vuex';
-import VChart from 'vue-echarts';
+import * as echarts from 'echarts';
 
 export default {
   name: 'ScriptExecutionTrend',
-  components: {
-    VChart
+  props: {
+    scriptId: {
+      type: [Number, String],
+      default: null
+    }
   },
   data() {
     return {
@@ -40,15 +44,63 @@ export default {
       selectedScript: null,
       timeRange: '30',
       trendData: [],
-      trendOption: {
+      chartInstance: null
+    };
+  },
+  computed: {
+    ...mapState(['scripts'])
+  },
+  mounted() {
+    // 在DOM挂载后初始化图表
+    this.$nextTick(() => {
+      this.initChart();
+      
+      if (this.scriptId) {
+        // 如果有传入scriptId，直接使用
+        this.selectedScript = Number(this.scriptId);
+        this.fetchTrend();
+      } else {
+        // 否则回退到原来的逻辑
+        this.fetchScripts();
+      }
+    });
+  },
+  beforeDestroy() {
+    // 组件销毁前清理图表实例
+    if (this.chartInstance) {
+      this.chartInstance.dispose();
+      this.chartInstance = null;
+    }
+  },
+  methods: {
+    // 初始化图表
+    initChart() {
+      // 确保DOM元素存在
+      const chartDom = document.getElementById('trend-chart');
+      if (!chartDom) {
+        console.error('找不到图表DOM元素');
+        return;
+      }
+      
+      // 销毁旧实例
+      if (this.chartInstance) {
+        this.chartInstance.dispose();
+      }
+      
+      // 创建新图表实例
+      this.chartInstance = echarts.init(chartDom);
+      
+      // 设置基本配置
+      const option = {
         tooltip: {
           trigger: 'axis',
           axisPointer: {
-            type: 'shadow'
-          }
+            type: 'line'
+          },
+          formatter: '{b}: {c}秒'
         },
         legend: {
-          data: ['执行次数', '成功率', '平均执行时间']
+          data: ['执行时延']
         },
         grid: {
           left: '3%',
@@ -56,71 +108,85 @@ export default {
           bottom: '3%',
           containLabel: true
         },
-        xAxis: [
-          {
-            type: 'category',
-            data: [],
-            axisPointer: {
-              type: 'shadow'
-            }
+        xAxis: {
+          type: 'category',
+          data: [],
+          axisPointer: {
+            type: 'shadow'
           }
-        ],
-        yAxis: [
-          {
-            type: 'value',
-            name: '执行次数',
-            min: 0,
-            axisLabel: {
-              formatter: '{value}'
-            }
-          },
-          {
-            type: 'value',
-            name: '百分比/时间',
-            min: 0,
-            max: 100,
-            axisLabel: {
-              formatter: '{value}'
-            }
+        },
+        yAxis: {
+          type: 'value',
+          name: '执行时延(秒)',
+          min: 0,
+          axisLabel: {
+            formatter: '{value}'
           }
-        ],
+        },
         series: [
           {
-            name: '执行次数',
-            type: 'bar',
-            data: [],
-            color: '#409eff'
-          },
-          {
-            name: '成功率',
+            name: '执行时延',
             type: 'line',
-            yAxisIndex: 1,
             data: [],
-            color: '#67c23a',
+            color: '#409eff',
             symbol: 'circle',
-            symbolSize: 8
-          },
-          {
-            name: '平均执行时间',
-            type: 'line',
-            yAxisIndex: 1,
-            data: [],
-            color: '#e6a23c',
-            symbol: 'triangle',
-            symbolSize: 8
+            symbolSize: 8,
+            smooth: true,
+            lineStyle: {
+              width: 3
+            },
+            areaStyle: {
+              opacity: 0.2,
+              color: {
+                type: 'linear',
+                x: 0,
+                y: 0,
+                x2: 0,
+                y2: 1,
+                colorStops: [
+                  {
+                    offset: 0,
+                    color: 'rgba(64, 158, 255, 0.7)'
+                  },
+                  {
+                    offset: 1,
+                    color: 'rgba(64, 158, 255, 0.1)'
+                  }
+                ]
+              }
+            },
+            emphasis: {
+              focus: 'series',
+              lineStyle: {
+                width: 5
+              }
+            }
           }
         ]
+      };
+      
+      // 设置图表选项
+      this.chartInstance.setOption(option);
+      
+      // 添加窗口大小变化监听
+      window.addEventListener('resize', this.resizeChart);
+    },
+    
+    // 响应窗口大小变化
+    resizeChart() {
+      if (this.chartInstance) {
+        this.chartInstance.resize();
       }
-    };
-  },
-  computed: {
-    ...mapState(['scripts'])
-  },
-  mounted() {
-    this.fetchScripts();
-  },
-  methods: {
+    },
+    
     fetchScripts() {
+      if (this.scriptId) {
+        // 如果已有scriptId，直接使用
+        this.selectedScript = Number(this.scriptId);
+        this.fetchTrend();
+        return;
+      }
+      
       if (this.scripts.length === 0) {
         this.$store.dispatch('fetchScripts').then(() => {
           if (this.scripts.length > 0) {
@@ -133,10 +199,12 @@ export default {
         this.fetchTrend();
       }
     },
+    
     async fetchTrend() {
       if (!this.selectedScript) return;
       
       this.loading = true;
+      console.log('开始获取脚本趋势数据，scriptId:', this.selectedScript);
       
       try {
         // 计算日期范围
@@ -151,12 +219,17 @@ export default {
           end_date: this.formatDate(endDate)
         };
         
+        console.log('请求参数:', params);
+        
         const response = await axios.get('/api/execution/statistics', { params });
+        console.log('API响应:', response.data);
         
         if (response.data.code === 0) {
           this.trendData = response.data.data;
+          console.log('获取到趋势数据:', this.trendData);
           this.updateChart();
         } else {
+          console.error('获取趋势数据失败:', response.data.message);
           this.$message.error(response.data.message || '获取趋势数据失败');
         }
       } catch (error) {
@@ -165,56 +238,64 @@ export default {
         this.loading = false;
       }
     },
+    
     formatDate(date) {
       const year = date.getFullYear();
       const month = (date.getMonth() + 1).toString().padStart(2, '0');
       const day = date.getDate().toString().padStart(2, '0');
       return `${year}-${month}-${day}`;
     },
+    
     updateChart() {
-      if (!this.trendData || !this.trendData.length) {
-        this.trendOption.xAxis[0].data = [];
-        this.trendOption.series[0].data = [];
-        this.trendOption.series[1].data = [];
-        this.trendOption.series[2].data = [];
+      if (!this.chartInstance || !this.trendData || !this.trendData.length) {
+        console.log('没有图表实例或趋势数据，无法更新图表');
         return;
       }
       
+      console.log('开始更新图表数据');
+      
       // 提取数据
       const timeLabels = this.trendData.map(item => item.time_period);
-      const totalCounts = this.trendData.map(item => item.total_count);
-      
-      // 计算成功率
-      const successRates = this.trendData.map(item => {
-        if (item.total_count > 0) {
-          return ((item.success_count / item.total_count) * 100).toFixed(2);
-        }
-        return 0;
-      });
       
       // 平均执行时间（秒）
       const avgTimes = this.trendData.map(item => {
         if (item.avg_execution_time) {
-          // 如果平均执行时间超过100秒，进行缩放以便在图表上显示
-          const time = Number(item.avg_execution_time);
-          return time > 100 ? 100 : time.toFixed(2);
+          // 确保返回数值而不是字符串
+          return parseFloat(Number(item.avg_execution_time).toFixed(2));
         }
         return 0;
       });
       
-      // 更新图表
-      this.trendOption.xAxis[0].data = timeLabels;
-      this.trendOption.series[0].data = totalCounts;
-      this.trendOption.series[1].data = successRates;
-      this.trendOption.series[2].data = avgTimes;
+      // 更新图表数据
+      this.chartInstance.setOption({
+        xAxis: {
+          data: timeLabels
+        },
+        series: [
+          {
+            name: '执行时延',
+            data: avgTimes
+          }
+        ]
+      });
+      
+      console.log('图表数据已更新:', {
+        timeLabels,
+        avgTimes
+      });
     }
   }
 };
 </script>
 
 <style lang="scss" scoped>
+.script-execution-trend {
+  width: 100%;
+}
+
 .chart-card {
   margin-bottom: 20px;
+  width: 100%;
   
   .card-header {
     display: flex;
@@ -226,10 +307,6 @@ export default {
       font-size: 16px;
       font-weight: 500;
     }
-  }
-  
-  .chart {
-    height: 300px;
   }
 }
 </style>

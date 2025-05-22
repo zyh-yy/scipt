@@ -16,6 +16,9 @@
           <el-button @click="showVersionHistory">
             <i class="el-icon-time"></i> 版本历史
           </el-button>
+          <el-button type="info" @click="handleAnalyze">
+            <i class="el-icon-cpu"></i> AI分析
+          </el-button>
           <el-button type="danger" @click="handleDelete">
             <i class="el-icon-delete"></i> 删除脚本
           </el-button>
@@ -23,7 +26,7 @@
       </div>
       
       <!-- 脚本执行趋势图表 -->
-      <script-execution-trend />
+      <script-execution-trend :script-id="scriptId" />
       
       <el-card v-if="script" class="detail-card">
         <div slot="header">
@@ -103,17 +106,20 @@
             >
             <el-input 
               v-if="param.param_type === 'string'" 
-              v-model="executeParams[param.name]"
+              :value="executeParams[param.name]"
+              @input="val => updateParam(param.name, val)"
               :placeholder="param.description"
             ></el-input>
             <el-input-number 
               v-else-if="param.param_type === 'number'" 
-              v-model="executeParams[param.name]"
+              :value="executeParams[param.name]"
+              @change="val => updateParam(param.name, val)"
               :placeholder="param.description"
             ></el-input-number>
             <el-select
               v-else-if="param.param_type === 'select'"
-              v-model="executeParams[param.name]"
+              :value="executeParams[param.name]"
+              @change="val => updateParam(param.name, val)"
               :placeholder="param.description"
             >
               <el-option
@@ -125,7 +131,8 @@
             </el-select>
             <el-switch
               v-else-if="param.param_type === 'boolean'"
-              v-model="executeParams[param.name]"
+              :value="executeParams[param.name]"
+              @change="val => updateParam(param.name, val)"
             ></el-switch>
             </el-form-item>
           </template>
@@ -226,6 +233,9 @@
     <el-dialog :title="versionContentTitle" :visible.sync="contentDialogVisible" width="80%" custom-class="version-content-dialog">
       <div v-loading="contentLoading">
         <pre class="version-content" v-if="versionContent">{{ versionContent }}</pre>
+        <div class="dialog-actions" v-if="currentVersion && currentVersion.is_current === 1">
+          <el-button type="primary" @click="handleEdit">编辑脚本</el-button>
+        </div>
       </div>
     </el-dialog>
 
@@ -277,6 +287,7 @@ export default {
       versionContent: null,
       contentLoading: false,
       versionContentTitle: "版本内容",
+      currentVersion: null,
       
       // 版本比较相关
       compareDialogVisible: false,
@@ -352,13 +363,39 @@ export default {
       // 初始化参数默认值
       if (this.script && this.script.parameters) {
         this.script.parameters.forEach(param => {
-          if (param.default_value) {
-            this.executeParams[param.name] = param.default_value;
+          let value;
+          
+          // 根据参数类型设置默认值
+          if (param.default_value !== undefined && param.default_value !== null && param.default_value !== '') {
+            if (param.param_type === 'number') {
+              value = Number(param.default_value);
+            } else if (param.param_type === 'boolean') {
+              value = param.default_value === true || param.default_value === 'true' || param.default_value === '1' || param.default_value === 1;
+            } else {
+              value = param.default_value;
+            }
+          } else {
+            // 根据参数类型设置空值
+            if (param.param_type === 'number') {
+              value = 0;
+            } else if (param.param_type === 'boolean') {
+              value = false;
+            } else if (param.param_type === 'select' && param.options && param.options.length) {
+              value = param.options[0];
+            } else {
+              value = '';
+            }
           }
+          
+          // 使用Vue.set确保响应式更新，特别是对于带下划线的参数
+          this.$set(this.executeParams, param.name, value);
         });
       }
       
-      this.executeDialogVisible = true;
+      this.$nextTick(() => {
+        this.executeDialogVisible = true;
+        console.log('执行参数:', this.executeParams); // 调试用
+      });
     },
     handleDelete() {
       this.$confirm('此操作将永久删除该脚本, 是否继续?', '提示', {
@@ -423,6 +460,15 @@ export default {
       }
     },
     
+    // AI分析脚本
+    handleAnalyze() {
+      // 跳转到脚本分析页面并传递脚本ID
+      this.$router.push({
+        path: '/scripts/ai/analyzer',
+        query: { scriptId: this.scriptId }
+      });
+    },
+    
     // 版本历史相关方法
     showVersionHistory() {
       this.versionDialogVisible = true;
@@ -455,6 +501,7 @@ export default {
       this.contentLoading = true;
       this.contentDialogVisible = true;
       this.versionContentTitle = `版本 ${version.version} (${this.formatTime(version.created_at)})`;
+      this.currentVersion = version; // 保存当前查看的版本信息
       
       this.$store.dispatch('fetchVersionContent', {
         scriptId: this.scriptId,
@@ -534,6 +581,12 @@ export default {
       }).catch(() => {
         this.$message.info('已取消回滚');
       });
+    },
+
+    // 使用手动更新方法处理带下划线的参数名
+    updateParam(paramName, value) {
+      // 使用Vue的$set方法确保响应式更新
+      this.$set(this.executeParams, paramName, value);
     }
   }
 };
@@ -645,5 +698,10 @@ export default {
 .button-container {
   display: flex;
   gap: 10px;
+}
+
+.dialog-actions {
+  margin-top: 20px;
+  text-align: right;
 }
 </style>

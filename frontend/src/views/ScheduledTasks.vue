@@ -5,6 +5,28 @@
       <el-button type="primary" @click="openTaskForm()">添加定时任务</el-button>
     </div>
 
+    <search-bar 
+      placeholder="搜索任务名称、描述或ID" 
+      :initial-search-form="searchForm"
+      @search="handleSearch"
+      @reset="resetSearch"
+    >
+      <template v-slot:advanced-fields>
+        <el-form-item label="执行对象">
+          <el-select v-model="searchForm.execType" clearable placeholder="选择执行对象">
+            <el-option label="脚本" value="script"></el-option>
+            <el-option label="脚本链" value="chain"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="searchForm.is_active" clearable placeholder="选择状态">
+            <el-option label="已启用" :value="1"></el-option>
+            <el-option label="已禁用" :value="0"></el-option>
+          </el-select>
+        </el-form-item>
+      </template>
+    </search-bar>
+
     <el-card class="filter-card">
       <div class="filter-container">
         <el-radio-group v-model="activeFilter" @change="loadTasks">
@@ -17,7 +39,7 @@
 
     <el-table
       v-loading="loading"
-      :data="tasks"
+      :data="filteredTasks"
       stripe
       style="width: 100%; margin-top: 20px"
     >
@@ -204,9 +226,13 @@
 
 <script>
 import axios from 'axios'
+import SearchBar from '@/components/SearchBar.vue';
 
 export default {
   name: 'ScheduledTasksView',
+  components: {
+    SearchBar
+  },
   data() {
     return {
       tasks: [],
@@ -218,6 +244,11 @@ export default {
       saving: false,
       executionTarget: 'script',
       paramsString: '',
+      searchForm: {
+        keyword: '',
+        execType: '',
+        is_active: null
+      },
       
       editingTask: {
         id: null,
@@ -262,6 +293,46 @@ export default {
       }
     }
   },
+  computed: {
+    filteredTasks() {
+      if (!this.tasks) return [];
+      
+      return this.tasks.filter(task => {
+        // 关键词搜索
+        const keyword = this.searchForm.keyword.toLowerCase();
+        if (keyword) {
+          const taskId = String(task.id);
+          const name = (task.name || '').toLowerCase();
+          const description = (task.description || '').toLowerCase();
+          const cronExpression = (task.cron_expression || '').toLowerCase();
+          
+          if (!taskId.includes(keyword) && 
+              !name.includes(keyword) && 
+              !description.includes(keyword) &&
+              !cronExpression.includes(keyword)) {
+            return false;
+          }
+        }
+        
+        // 执行对象过滤
+        if (this.searchForm.execType) {
+          if (this.searchForm.execType === 'script' && !task.script_id) {
+            return false;
+          }
+          if (this.searchForm.execType === 'chain' && !task.chain_id) {
+            return false;
+          }
+        }
+        
+        // 状态过滤
+        if (this.searchForm.is_active !== null && task.is_active !== this.searchForm.is_active) {
+          return false;
+        }
+        
+        return true;
+      });
+    }
+  },
   watch: {
     paramsString: {
       handler(val) {
@@ -284,6 +355,16 @@ export default {
     this.loadChains()
   },
   methods: {
+    handleSearch(formData) {
+      this.searchForm = { ...formData };
+    },
+    resetSearch() {
+      this.searchForm = {
+        keyword: '',
+        execType: '',
+        is_active: null
+      };
+    },
     async loadTasks() {
       this.loading = true
       try {
@@ -441,7 +522,15 @@ export default {
           if (response.data.code === 0) {
             this.$message.success(response.data.message || '保存定时任务成功')
             this.dialogVisible = false
-            this.loadTasks()
+            
+            // 强制刷新任务列表，确保新添加的任务立即显示
+            this.tasks = [] // 先清空列表避免缓存问题
+            await this.loadTasks() // 重新加载并等待完成
+            
+            // 如果页面使用了筛选，重置筛选条件确保看到新添加的任务
+            if (this.activeFilter !== null) {
+              this.activeFilter = null // 重置筛选以显示所有任务
+            }
           } else {
             this.$message.error(response.data.message || '保存定时任务失败')
           }

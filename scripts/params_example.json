@@ -1,0 +1,51 @@
+{
+    "table_name": "scripts",
+    "record_count": 2,
+    "add_parameters": true,
+    "records": [
+        {
+            "name": "测试参数脚本1",
+            "description": "通过参数文件创建的测试脚本1",
+            "file_path": "scripts/param_test_example1.py",
+            "file_type": "python",
+            "parameters": [
+                {
+                    "name": "input_file",
+                    "description": "输入文件路径",
+                    "param_type": "string",
+                    "is_required": 1,
+                    "default_value": "data.txt"
+                },
+                {
+                    "name": "output_format",
+                    "description": "输出格式",
+                    "param_type": "select",
+                    "is_required": 0,
+                    "default_value": "json"
+                }
+            ]
+        },
+        {
+            "name": "测试参数脚本2",
+            "description": "通过参数文件创建的测试脚本2",
+            "file_path": "scripts/param_test_example2.js",
+            "file_type": "javascript",
+            "parameters": [
+                {
+                    "name": "api_url",
+                    "description": "API请求地址",
+                    "param_type": "string",
+                    "is_required": 1,
+                    "default_value": "http://localhost:5000/api"
+                },
+                {
+                    "name": "timeout",
+                    "description": "超时时间(秒)",
+                    "param_type": "number",
+                    "is_required": 0,
+                    "default_value": "30"
+                }
+            ]
+        }
+    ]
+}

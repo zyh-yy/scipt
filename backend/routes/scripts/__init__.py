@@ -11,7 +11,12 @@ script_bp = Blueprint('scripts', __name__, url_prefix='/api/scripts')
 from . import base
 from . import crud
 from . import upload
+from . import template
+from . import ai_generator
 from .version import version_list, version_edit, version_compare
+
+# 注册AI脚本生成器路由
+ai_generator.register_routes(script_bp)
 
 # 导出Blueprint
 __all__ = ['script_bp']

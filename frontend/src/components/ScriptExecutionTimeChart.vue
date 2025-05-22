@@ -32,7 +32,7 @@
       </div>
       
       <el-empty v-if="!selectedScript" description="请选择脚本"></el-empty>
-      <v-chart v-else class="chart" :option="chartOption" autoresize />
+      <div v-else id="script-time-chart" style="width: 100%; height: 300px; margin-top: 10px;"></div>
     </el-card>
   </div>
 </template>
@@ -40,20 +40,52 @@
 <script>
 import axios from 'axios';
 import { mapState } from 'vuex';
-import VChart from 'vue-echarts';
+import * as echarts from 'echarts';
 
 export default {
   name: 'ScriptExecutionTimeChart',
-  components: {
-    VChart
-  },
   data() {
     return {
       loading: false,
       selectedScript: null,
       timeRange: '30',
       executionData: [],
-      chartOption: {
+      chartInstance: null
+    };
+  },
+  computed: {
+    ...mapState(['scripts'])
+  },
+  mounted() {
+    this.$nextTick(() => {
+      this.fetchScripts();
+    });
+  },
+  beforeDestroy() {
+    if (this.chartInstance) {
+      this.chartInstance.dispose();
+      window.removeEventListener('resize', this.resizeChart);
+    }
+  },
+  methods: {
+    initChart() {
+      // 确保DOM元素存在
+      const chartDom = document.getElementById('script-time-chart');
+      if (!chartDom) {
+        console.error('找不到图表DOM元素');
+        return;
+      }
+      
+      // 销毁旧实例
+      if (this.chartInstance) {
+        this.chartInstance.dispose();
+      }
+      
+      // 创建新图表实例
+      this.chartInstance = echarts.init(chartDom);
+      
+      // 设置基本配置
+      const option = {
         title: {
           text: '执行时间变化',
           left: 'center'
@@ -113,29 +145,38 @@ export default {
             }
           }
         }]
+      };
+      
+      // 设置图表选项
+      this.chartInstance.setOption(option);
+      
+      // 添加窗口大小变化监听
+      window.addEventListener('resize', this.resizeChart);
+    },
+    
+    // 响应窗口大小变化
+    resizeChart() {
+      if (this.chartInstance) {
+        this.chartInstance.resize();
       }
-    };
-  },
-  computed: {
-    ...mapState(['scripts'])
-  },
-  mounted() {
-    this.fetchScripts();
-  },
-  methods: {
+    },
+    
     fetchScripts() {
       if (this.scripts.length === 0) {
         this.$store.dispatch('fetchScripts').then(() => {
           if (this.scripts.length > 0) {
             this.selectedScript = this.scripts[0].id;
+            this.initChart();
             this.fetchData();
           }
         });
       } else if (this.scripts.length > 0) {
         this.selectedScript = this.scripts[0].id;
+        this.initChart();
         this.fetchData();
       }
     },
+    
     async fetchData() {
       if (!this.selectedScript) return;
       
@@ -166,13 +207,19 @@ export default {
         this.loading = false;
       }
     },
+    
     formatDate(date) {
       const year = date.getFullYear();
       const month = (date.getMonth() + 1).toString().padStart(2, '0');
       const day = date.getDate().toString().padStart(2, '0');
       return `${year}-${month}-${day}`;
     },
+    
     processData(data) {
+      if (!this.chartInstance) {
+        this.initChart();
+      }
+      
       // 过滤出当前选择的脚本的执行历史
       const scriptHistories = data.filter(item => 
         item.script_id === this.selectedScript && 
@@ -187,17 +234,24 @@ export default {
       const chartData = scriptHistories.map(item => {
         return [
           item.start_time,
-          item.execution_time
+          parseFloat(item.execution_time)
         ];
       });
-      
-      // 更新图表数据
-      this.chartOption.series[0].data = chartData;
       
       // 更新标题
       const foundScript = this.scripts.find(s => s.id === this.selectedScript);
       const scriptName = foundScript ? foundScript.name : '未知脚本';
-      this.chartOption.title.text = `${scriptName} - 执行时间变化`;
+      
+      // 更新图表数据
+      this.chartInstance.setOption({
+        title: {
+          text: `${scriptName} - 执行时间变化`
+        },
+        series: [{
+          name: '执行时间',
+          data: chartData
+        }]
+      });
     }
   }
 };
@@ -222,11 +276,6 @@ export default {
       display: flex;
       align-items: center;
     }
-  }
-  
-  .chart {
-    height: 300px;
-    margin-top: 10px;
   }
 }
 </style>

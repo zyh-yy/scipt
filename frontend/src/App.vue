@@ -16,6 +16,7 @@
         >
           <el-menu-item index="/">首页</el-menu-item>
           <el-menu-item index="/scripts">脚本管理</el-menu-item>
+          <el-menu-item index="/scripts/ai/ai-generator">AI脚本生成</el-menu-item>
           <el-menu-item index="/chains">脚本链管理</el-menu-item>
           <el-menu-item index="/scheduled-tasks">定时任务</el-menu-item>
           <el-menu-item index="/history">执行历史</el-menu-item>

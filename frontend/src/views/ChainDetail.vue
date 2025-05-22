@@ -83,7 +83,7 @@
             </div>
           </el-form-item>
           
-          <div v-if="hasRequiredParams" class="params-form">
+          <div v-if="allParams.length > 0" class="params-form">
             <h3>脚本链参数配置</h3>
             <el-form-item 
               v-for="param in allParams" 
@@ -94,17 +94,20 @@
             >
               <el-input 
                 v-if="param.param_type === 'string'" 
-                v-model="executeParams[param.name]"
+                :value="executeParams[param.name]"
+                @input="val => updateParam(param.name, val)"
                 :placeholder="param.description"
               ></el-input>
               <el-input-number 
                 v-else-if="param.param_type === 'number'" 
-                v-model="executeParams[param.name]"
+                :value="executeParams[param.name]"
+                @change="val => updateParam(param.name, val)"
                 :placeholder="param.description"
               ></el-input-number>
               <el-select
                 v-else-if="param.param_type === 'select'"
-                v-model="executeParams[param.name]"
+                :value="executeParams[param.name]"
+                @change="val => updateParam(param.name, val)"
                 :placeholder="param.description"
               >
                 <el-option
@@ -116,7 +119,8 @@
               </el-select>
               <el-switch
                 v-else-if="param.param_type === 'boolean'"
-                v-model="executeParams[param.name]"
+                :value="executeParams[param.name]"
+                @change="val => updateParam(param.name, val)"
               ></el-switch>
             </el-form-item>
           </div>
@@ -290,17 +294,43 @@ export default {
               const existingParam = this.allParams.find(p => p.name === param.name);
               if (!existingParam) {
                 this.allParams.push(param);
-                // 初始化默认值
-                if (param.default_value) {
-                  this.executeParams[param.name] = param.default_value;
+                
+                let value;
+                
+                // 根据参数类型设置默认值
+                if (param.default_value !== undefined && param.default_value !== null && param.default_value !== '') {
+                  if (param.param_type === 'number') {
+                    value = Number(param.default_value);
+                  } else if (param.param_type === 'boolean') {
+                    value = param.default_value === true || param.default_value === 'true' || param.default_value === '1' || param.default_value === 1;
+                  } else {
+                    value = param.default_value;
+                  }
+                } else {
+                  // 根据参数类型设置空值
+                  if (param.param_type === 'number') {
+                    value = 0;
+                  } else if (param.param_type === 'boolean') {
+                    value = false;
+                  } else if (param.param_type === 'select' && param.options && param.options.length) {
+                    value = param.options[0];
+                  } else {
+                    value = '';
+                  }
                 }
+                
+                // 使用Vue.set确保响应式更新，特别是对于带下划线的参数
+                this.$set(this.executeParams, param.name, value);
               }
             });
           }
         });
       }
       
-      this.executeDialogVisible = true;
+      this.$nextTick(() => {
+        this.executeDialogVisible = true;
+        console.log('执行参数:', this.executeParams); // 调试用
+      });
     },
     handleDelete() {
       this.$confirm('此操作将永久删除该脚本链, 是否继续?', '提示', {
@@ -369,6 +399,12 @@ export default {
       
       const node = this.chain.nodes.find(n => n.script_id === parseInt(scriptId));
       return node ? node.script_name : `脚本 ID: ${scriptId}`;
+    },
+    
+    // 使用手动更新方法处理带下划线的参数名
+    updateParam(paramName, value) {
+      // 使用Vue的$set方法确保响应式更新
+      this.$set(this.executeParams, paramName, value);
     }
   }
 };

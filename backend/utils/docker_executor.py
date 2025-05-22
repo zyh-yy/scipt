@@ -55,13 +55,33 @@ class DockerExecutor:
         _, ext = os.path.splitext(script_path)
         ext = ext.lstrip('.').lower()
         
-        # 准备参数和上一个脚本的输出
-        prepared_params = params.copy() if params else {}
+        # 准备标准化参数结构
+        standard_params = {
+            "user_params": {},
+            "system_params": {
+                "__execution_time": time.strftime("%Y-%m-%d %H:%M:%S")
+            },
+            "file_params": {}
+        }
+        
+        # 填充用户参数
+        if params and isinstance(params, dict):
+            # 如果已经是标准化结构，保持原样
+            if all(key in params for key in ["user_params", "system_params", "file_params"]):
+                standard_params = params.copy()
+            # 否则，假设它是用户参数
+            else:
+                standard_params["user_params"] = params.copy()
+        
+        # 添加上一个脚本的输出
         if prev_output is not None:
-            prepared_params['__prev_output'] = prev_output
+            standard_params["system_params"]["__prev_output"] = prev_output
+            
+        # 记录参数传递情况
+        logger.info(f"传递给Docker容器的参数: {json.dumps(standard_params, ensure_ascii=False)[:500]}...")
         
         # 准备参数文件
-        params_file = DockerExecutor._write_params_file(prepared_params)
+        params_file = DockerExecutor._write_params_file(standard_params)
         if not params_file:
             return False, None, "无法创建参数文件"
         
@@ -180,6 +200,25 @@ class DockerExecutor:
         outputs = {}
         prev_output = None
         
+        # 准备标准化参数结构
+        standard_params = {
+            "user_params": {},
+            "system_params": {
+                "__execution_time": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "__chain_execution": True
+            },
+            "file_params": {}
+        }
+        
+        # 填充用户参数
+        if params and isinstance(params, dict):
+            # 如果已经是标准化结构，保持原样
+            if all(key in params for key in ["user_params", "system_params", "file_params"]):
+                standard_params = params.copy()
+            # 否则，假设它是用户参数
+            else:
+                standard_params["user_params"] = params.copy()
+        
         for i, node in enumerate(chain_nodes):
             script_id = node['script_id']
             script_path = node['file_path']
@@ -188,10 +227,13 @@ class DockerExecutor:
             
             # 第一个脚本使用初始参数，后续脚本使用前一个脚本的输出作为输入
             if i == 0:
-                node_params = params
+                node_params = standard_params
             else:
                 # 后续节点会同时接收用户传入的参数和前一个脚本的输出
-                node_params = params.copy() if params else {}
+                node_params = standard_params.copy()
+                # 添加前一个脚本的输出
+                if prev_output is not None:
+                    node_params["system_params"]["__prev_output"] = prev_output
             
             # 获取脚本类型
             _, ext = os.path.splitext(script_path)
@@ -313,7 +355,8 @@ class DockerExecutor:
     def _get_docker_command(script_ext, script_name, params_name):
         """根据脚本类型获取Docker容器中的执行命令"""
         if script_ext == 'py':
-            # 对于Python脚本，先安装项目所有依赖，再执行脚本
+            # 对于Python脚本，直接使用Python解释器执行脚本
+            # 避免使用source命令（在某些shell中不支持）
             # 使用项目根目录的requirements.txt
             project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
             requirements_path = os.path.join(project_root, 'requirements.txt')
@@ -322,8 +365,8 @@ class DockerExecutor:
                 'sh', '-c',
                 f"pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/ && "
                 f"pip config set global.trusted-host mirrors.aliyun.com && "
-                f"pip install --no-cache-dir -r /params/requirements.txt && "
-                f"pip install --no-cache-dir psutil && "  # 确保安装psutil
+                f"pip install --no-cache-dir --user -r /params/requirements.txt && "
+                f"pip install --no-cache-dir --user psutil && "  # 确保安装psutil
                 f"python /app/{script_name} /params/{params_name}"
             ]
         

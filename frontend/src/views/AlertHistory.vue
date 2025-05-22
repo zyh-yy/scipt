@@ -11,9 +11,35 @@
       <el-button @click="backToAlerts">返回告警配置</el-button>
     </div>
 
+    <search-bar 
+      placeholder="搜索告警历史(ID、消息)" 
+      :initial-search-form="searchForm"
+      @search="handleSearch"
+      @reset="resetSearch"
+    >
+      <template v-slot:advanced-fields>
+        <el-form-item label="状态">
+          <el-select v-model="searchForm.status" clearable placeholder="选择状态">
+            <el-option label="已发送" value="sent"></el-option>
+            <el-option label="发送失败" value="failed"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="发送时间">
+          <el-date-picker
+            v-model="searchForm.dateRange"
+            type="datetimerange"
+            range-separator="至"
+            start-placeholder="开始时间"
+            end-placeholder="结束时间"
+            value-format="yyyy-MM-dd HH:mm:ss"
+          ></el-date-picker>
+        </el-form-item>
+      </template>
+    </search-bar>
+
     <el-table
       v-loading="loading"
-      :data="histories"
+      :data="filteredHistories"
       stripe
       style="width: 100%; margin-top: 20px"
     >
@@ -65,9 +91,13 @@
 
 <script>
 import axios from 'axios'
+import SearchBar from '@/components/SearchBar.vue';
 
 export default {
   name: 'AlertHistoryView',
+  components: {
+    SearchBar
+  },
   data() {
     return {
       // 分页参数
@@ -79,7 +109,51 @@ export default {
       histories: [],
       loading: false,
       configId: null,
-      configName: ''
+      configName: '',
+      searchForm: {
+        keyword: '',
+        status: '',
+        dateRange: []
+      }
+    }
+  },
+  computed: {
+    filteredHistories() {
+      if (!this.histories) return [];
+      
+      return this.histories.filter(history => {
+        // 关键词搜索
+        const keyword = this.searchForm.keyword.toLowerCase();
+        if (keyword) {
+          const id = String(history.id);
+          const message = (history.message || '').toLowerCase();
+          const alertName = (history.alert_name || '').toLowerCase();
+          
+          if (!id.includes(keyword) && 
+              !message.includes(keyword) && 
+              !alertName.includes(keyword)) {
+            return false;
+          }
+        }
+        
+        // 状态过滤
+        if (this.searchForm.status && history.status !== this.searchForm.status) {
+          return false;
+        }
+        
+        // 日期范围过滤
+        if (this.searchForm.dateRange && this.searchForm.dateRange.length === 2) {
+          const startDate = new Date(this.searchForm.dateRange[0]);
+          const endDate = new Date(this.searchForm.dateRange[1]);
+          const sentDate = new Date(history.sent_at);
+          
+          if (sentDate < startDate || sentDate > endDate) {
+            return false;
+          }
+        }
+        
+        return true;
+      });
     }
   },
   created() {
@@ -95,6 +169,16 @@ export default {
     this.loadHistories()
   },
   methods: {
+    handleSearch(formData) {
+      this.searchForm = { ...formData };
+    },
+    resetSearch() {
+      this.searchForm = {
+        keyword: '',
+        status: '',
+        dateRange: []
+      };
+    },
     // 加载告警历史记录
     async loadHistories() {
       this.loading = true

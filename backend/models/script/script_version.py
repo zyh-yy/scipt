@@ -7,6 +7,7 @@ import os
 import sys
 import datetime
 import hashlib
+import sqlite3
 
 # 导入项目配置
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -19,8 +20,19 @@ class ScriptVersion:
     """脚本版本模型类"""
     
     @staticmethod
-    def add(script_id, file_path, version=None, description=None):
-        """添加脚本版本"""
+    def add(script_id, file_path, version=None, description=None, force_create=False):
+        """添加脚本版本
+        
+        Args:
+            script_id: 脚本ID
+            file_path: 文件路径
+            version: 版本号，如果为None则自动生成
+            description: 版本描述
+            force_create: 是否强制创建新版本，即使内容与最新版本相同
+            
+        Returns:
+            int: 版本ID，如果失败则返回None
+        """
         try:
             # 计算文件内容的哈希值
             content_hash = ScriptVersion._calculate_file_hash(file_path)
@@ -30,7 +42,7 @@ class ScriptVersion:
                 
             # 检查是否与最新版本内容相同
             latest_version = ScriptVersion.get_latest_version(script_id)
-            if latest_version and latest_version.get('content_hash') == content_hash:
+            if not force_create and latest_version and latest_version.get('content_hash') == content_hash:
                 logger.info(f"脚本内容未变化，不创建新版本: 脚本ID {script_id}")
                 return latest_version['id']
             
@@ -181,16 +193,64 @@ class ScriptVersion:
         """获取指定版本的文件内容"""
         try:
             version = ScriptVersion.get_version_by_id(version_id)
-            if not version or not version['file_path']:
+            if not version:
+                return None
+                
+            # 优先从数据库中读取内容
+            conn = DBManager.get_connection()
+            conn.row_factory = DBManager.dict_factory
+            cursor = conn.cursor()
+            
+            try:
+                cursor.execute("SELECT content FROM script_versions WHERE id = ?", (version_id,))
+                result = cursor.fetchone()
+                if result and result['content']:
+                    logger.info(f"从数据库中读取脚本内容成功: 版本ID {version_id}")
+                    conn.close()
+                    return result['content']
+            except sqlite3.OperationalError as e:
+                # 如果没有content列，则忽略错误
+                pass
+            
+            conn.close()
+                
+            # 如果数据库中没有内容，则尝试从文件中读取
+            if not version['file_path']:
                 return None
                 
             # 读取文件内容
             try:
                 with open(version['file_path'], 'r', encoding='utf-8') as f:
                     content = f.read()
+                
+                logger.info(f"从文件中读取脚本内容成功: {version['file_path']}")
                 return content
             except Exception as e:
                 logger.error(f"读取脚本文件失败: {str(e)}")
+                
+                # 如果指定文件读取失败，尝试从脚本原始文件读取
+                # 避免循环导入
+                script = None
+                conn = DBManager.get_connection()
+                conn.row_factory = DBManager.dict_factory
+                cursor = conn.cursor()
+                
+                cursor.execute('''
+                SELECT * FROM scripts WHERE id = ?
+                ''', (version['script_id'],))
+                
+                script = cursor.fetchone()
+                conn.close()
+                if script and script['file_path'] and os.path.exists(script['file_path']):
+                    try:
+                        with open(script['file_path'], 'r', encoding='utf-8') as f:
+                            content = f.read()
+                        
+                        logger.info(f"从原始脚本文件中读取内容成功: {script['file_path']}")
+                        return content
+                    except Exception as e2:
+                        logger.error(f"读取原始脚本文件失败: {str(e2)}")
+                
                 return None
         except Exception as e:
             logger.error(f"获取脚本版本文件内容失败: {str(e)}")

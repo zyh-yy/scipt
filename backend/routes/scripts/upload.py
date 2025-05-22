@@ -19,6 +19,7 @@ def add_script_with_file():
         name = request.form.get('name', '')
         description = request.form.get('description', '')
         params_json = request.form.get('parameters', '[]')
+        output_mode = request.form.get('output_mode', 'json')
         
         # 验证必填字段
         if not name:
@@ -42,7 +43,7 @@ def add_script_with_file():
             params = []
         
         # 添加到数据库
-        script_id = Script.add(name, description, file_path, file_type)
+        script_id = Script.add(name, description, file_path, file_type, output_mode=output_mode)
         
         if not script_id:
             # 删除已上传的文件
@@ -63,6 +64,24 @@ def add_script_with_file():
                 param.get('is_required', 1),
                 param.get('default_value')
             )
+        
+        # 创建参数schema，即使没有参数
+        try:
+            from models.script.script_parameter import ScriptParameter
+            ScriptParameter.create_default_schema(script_id)
+        except Exception as e:
+            logger.warning(f"创建参数schema失败: {str(e)}")
+            
+        # 确保创建初始版本
+        try:
+            from models.script.script_version import ScriptVersion
+            version_id = ScriptVersion.add(script_id, file_path, version="1.0.0", description="初始版本", force_create=True)
+            if not version_id:
+                logger.warning(f"添加脚本成功，但创建初始版本失败: 脚本ID {script_id}")
+            else:
+                logger.info(f"添加脚本初始版本成功: 脚本ID {script_id}, 版本ID {version_id}")
+        except Exception as e:
+            logger.error(f"创建脚本初始版本失败: {str(e)}")
         
         # 获取完整的脚本信息
         script = Script.get(script_id)
@@ -86,6 +105,25 @@ def upload_script_file():
         file_path, file_type, error_msg = save_uploaded_file(file)
         if error_msg:
             return error_response(400, error_msg)
+        
+        # 获取脚本ID (如果是更新现有脚本)
+        script_id = request.form.get('script_id')
+        if script_id:
+            # 如果提供了脚本ID，确保创建新版本
+            try:
+                from models.script.script_version import ScriptVersion
+                version_id = ScriptVersion.add(int(script_id), file_path, description="更新文件", force_create=True)
+                if not version_id:
+                    logger.warning(f"上传文件成功，但创建版本失败: 脚本ID {script_id}")
+                
+                # 更新参数schema
+                try:
+                    from models.script.script_parameter import ScriptParameter
+                    ScriptParameter.create_default_schema(int(script_id))
+                except Exception as e:
+                    logger.warning(f"更新参数schema失败: {str(e)}")
+            except Exception as e:
+                logger.warning(f"尝试创建脚本版本失败: {str(e)}")
         
         # 返回文件信息
         return success_response({
@@ -136,6 +174,19 @@ def update_script_file(script_id):
                 pass
             
             return error_response(500, '更新脚本文件失败', 500)
+        
+        # 确保创建新版本
+        from models.script.script_version import ScriptVersion
+        version_id = ScriptVersion.add(script_id, file_path, description="更新文件", force_create=True)
+        if not version_id:
+            logger.warning(f"更新脚本文件成功，但创建版本失败: 脚本ID {script_id}")
+            
+        # 更新参数schema
+        try:
+            from models.script.script_parameter import ScriptParameter
+            ScriptParameter.create_default_schema(script_id)
+        except Exception as e:
+            logger.warning(f"更新参数schema失败: {str(e)}")
         
         # 获取更新后的脚本信息
         updated_script = Script.get(script_id)

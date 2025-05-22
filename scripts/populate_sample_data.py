@@ -958,7 +958,7 @@ def create_sample_alert_configs():
             "condition_value": "failed",
             "notification_type": "email",
             "notification_config": {
-                "recipients": ["admin@example.com"]
+                "recipients": ["zhuyuanhui2002@163.com"]
             }
         },
         {
@@ -969,7 +969,7 @@ def create_sample_alert_configs():
             "condition_value": "30",
             "notification_type": "email",
             "notification_config": {
-                "recipients": ["admin@example.com", "operator@example.com"]
+                "recipients": ["zhuyuanhui2002@163.com"]
             }
         },
         {
@@ -980,7 +980,7 @@ def create_sample_alert_configs():
             "condition_value": "failed",
             "notification_type": "email",
             "notification_config": {
-                "recipients": ["admin@example.com", "manager@example.com"]
+                "recipients": ["zhuyuanhui2002@163.com"]
             }
         }
     ]

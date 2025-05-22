@@ -1,0 +1,78 @@
+{
+  "parameters": [
+    {
+      "name": "name",
+      "description": "名称参数",
+      "type": "string",
+      "required": false,
+      "default": "World"
+    },
+    {
+      "name": "value",
+      "description": "数值参数",
+      "type": "integer",
+      "required": false,
+      "default": 42,
+      "min": 0,
+      "max": 100
+    },
+    {
+      "name": "options",
+      "description": "选项列表",
+      "type": "array",
+      "required": false,
+      "default": ["option1", "option2"],
+      "min_items": 1,
+      "max_items": 5
+    },
+    {
+      "name": "config",
+      "description": "配置对象",
+      "type": "object",
+      "required": false,
+      "default": {
+        "enabled": true,
+        "timeout": 30
+      }
+    },
+    {
+      "name": "input_file",
+      "description": "输入文件路径",
+      "type": "file",
+      "required": true
+    },
+    {
+      "name": "output_file",
+      "description": "输出文件路径",
+      "type": "file",
+      "required": false,
+      "default": "./output.txt"
+    },
+    {
+      "name": "mode",
+      "description": "处理模式",
+      "type": "enum",
+      "required": false,
+      "default": "normal",
+      "enum_values": ["normal", "fast", "thorough"]
+    },
+    {
+      "name": "date",
+      "description": "处理日期",
+      "type": "date",
+      "required": false,
+      "default": "2025-05-21"
+    }
+  ],
+  "output": {
+    "format": "json",
+    "schema": {
+      "message": "字符串，处理结果消息",
+      "value": "整数，处理后的值",
+      "processed_at": "字符串，处理时间",
+      "status": "字符串，处理状态",
+      "prev_output_processed": "布尔值，是否处理了前一个脚本的输出（可选）",
+      "prev_result": "字符串，前一个脚本的处理结果（可选）"
+    }
+  }
+}

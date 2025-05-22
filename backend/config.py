@@ -12,6 +12,12 @@ DATABASE_PATH = os.path.join(BASE_DIR, 'database', 'scripts.db')
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'scripts')
 ALLOWED_EXTENSIONS = {'py', 'sh', 'bat', 'ps1', 'js'}
 
+# AI生成器配置
+AI_API_KEY = "sk-5cdd3cf1d3a241898b4f82a26003f221"  # 替换为实际API密钥
+AI_API_ENDPOINT = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+SCRIPT_DIR = UPLOAD_FOLDER  # 脚本存储目录
+DEFAULT_OUTPUT_MODE = "json"  # 默认输出模式
+
 # 确保脚本存储目录存在
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)

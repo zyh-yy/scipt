@@ -75,6 +75,16 @@ const routes = [
     component: () => import('../views/ScheduledTasks.vue')
   },
   {
+    path: '/scripts/ai/ai-generator',
+    name: 'AIScriptGenerator',
+    component: () => import('../views/AIScriptGenerator.vue')
+  },
+  {
+    path: '/scripts/ai/analyzer',
+    name: 'ScriptAnalyzer',
+    component: () => import('../views/ScriptAnalyzerView.vue')
+  },
+  {
     path: '*',
     name: '404',
     component: () => import('../views/NotFound.vue')

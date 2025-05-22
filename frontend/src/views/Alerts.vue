@@ -4,6 +4,35 @@
       <h1>告警配置</h1>
       <el-button type="primary" @click="openAlertForm()">添加告警</el-button>
     </div>
+    
+    <search-bar 
+      placeholder="搜索告警名称、描述或ID" 
+      :initial-search-form="searchForm"
+      @search="handleSearch"
+      @reset="resetSearch"
+    >
+      <template v-slot:advanced-fields>
+        <el-form-item label="告警类型">
+          <el-select v-model="searchForm.alert_type" clearable placeholder="选择告警类型">
+            <el-option label="脚本执行失败" value="script_failed"></el-option>
+            <el-option label="脚本执行超时" value="script_timeout"></el-option>
+            <el-option label="链式任务失败" value="chain_failed"></el-option>
+            <el-option label="系统资源告警" value="system_resource"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="通知方式">
+          <el-select v-model="searchForm.notification_type" clearable placeholder="选择通知方式">
+            <el-option label="邮件" value="email"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="searchForm.is_active" clearable placeholder="选择状态">
+            <el-option label="已启用" :value="1"></el-option>
+            <el-option label="已禁用" :value="0"></el-option>
+          </el-select>
+        </el-form-item>
+      </template>
+    </search-bar>
 
     <el-card class="filter-card">
       <div class="filter-container">
@@ -17,7 +46,7 @@
 
     <el-table
       v-loading="loading"
-      :data="alertConfigs"
+      :data="filteredAlertConfigs"
       stripe
       style="width: 100%; margin-top: 20px"
     >
@@ -232,9 +261,13 @@
 
 <script>
 import axios from 'axios'
+import SearchBar from '@/components/SearchBar.vue';
 
 export default {
   name: 'AlertsView',
+  components: {
+    SearchBar
+  },
   data() {
     return {
       alertConfigs: [],
@@ -243,6 +276,12 @@ export default {
       activeFilter: null,
       saving: false,
       testingEmail: false,
+      searchForm: {
+        keyword: '',
+        alert_type: '',
+        notification_type: '',
+        is_active: null
+      },
       
       editingAlert: {
         id: null,
@@ -290,10 +329,59 @@ export default {
       }
     }
   },
+  computed: {
+    filteredAlertConfigs() {
+      if (!this.alertConfigs) return [];
+      
+      return this.alertConfigs.filter(config => {
+        // 关键词搜索
+        const keyword = this.searchForm.keyword.toLowerCase();
+        if (keyword) {
+          const id = String(config.id);
+          const name = (config.name || '').toLowerCase();
+          const description = (config.description || '').toLowerCase();
+          
+          if (!id.includes(keyword) && 
+              !name.includes(keyword) && 
+              !description.includes(keyword)) {
+            return false;
+          }
+        }
+        
+        // 告警类型过滤
+        if (this.searchForm.alert_type && config.alert_type !== this.searchForm.alert_type) {
+          return false;
+        }
+        
+        // 通知方式过滤
+        if (this.searchForm.notification_type && config.notification_type !== this.searchForm.notification_type) {
+          return false;
+        }
+        
+        // 状态过滤
+        if (this.searchForm.is_active !== null && config.is_active !== this.searchForm.is_active) {
+          return false;
+        }
+        
+        return true;
+      });
+    }
+  },
   created() {
     this.loadAlertConfigs()
   },
   methods: {
+    handleSearch(formData) {
+      this.searchForm = { ...formData };
+    },
+    resetSearch() {
+      this.searchForm = {
+        keyword: '',
+        alert_type: '',
+        notification_type: '',
+        is_active: null
+      };
+    },
     async loadAlertConfigs() {
       this.loading = true
       try {

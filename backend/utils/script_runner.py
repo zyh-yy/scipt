@@ -12,14 +12,18 @@ import subprocess
 import tempfile
 from pathlib import Path
 import threading
+
+# 添加项目根目录到系统路径
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import SCRIPT_TIMEOUT, ALLOWED_EXTENSIONS, USE_DOCKER, logger
 from .docker_executor import DockerExecutor
+from models.script.script_parameter import ScriptParameter
 
 class ScriptRunner:
     """脚本执行器类，负责执行各种类型的脚本"""
     
     @staticmethod
-    def run_script(script_path, params=None, prev_output=None, use_docker=None):
+    def run_script(script_path, params=None, prev_output=None, use_docker=None, output_mode='json'):
         """
         执行脚本
         
@@ -43,7 +47,7 @@ class ScriptRunner:
             return False, None, f"不支持的脚本类型: {ext}"
         
         # 准备参数和上一个脚本的输出
-        prepared_params = ScriptRunner._prepare_params(params, prev_output)
+        prepared_params = ScriptRunner._prepare_params(script_path, params, prev_output)
         
         # 确定是否使用Docker执行
         use_docker_execution = USE_DOCKER if use_docker is None else use_docker
@@ -51,42 +55,137 @@ class ScriptRunner:
         # 如果启用Docker执行
         if use_docker_execution:
             logger.info(f"使用Docker容器执行脚本: {script_path}")
-            return DockerExecutor.run_script_in_docker(script_path, prepared_params, prev_output)
+            result = DockerExecutor.run_script_in_docker(script_path, prepared_params, prev_output)
+            if result[0]:  # 如果执行成功，处理输出
+                return ScriptRunner._process_output(result[0], result[1], result[2], output_mode)
+            return result
         
         # 直接在主机上执行脚本
         # 根据脚本类型执行不同的命令
         if ext == 'py':
-            return ScriptRunner._run_python_script(script_path, prepared_params)
+            result = ScriptRunner._run_python_script(script_path, prepared_params)
         elif ext in ['sh', 'bash']:
-            return ScriptRunner._run_shell_script(script_path, prepared_params)
+            result = ScriptRunner._run_shell_script(script_path, prepared_params)
         elif ext == 'bat':
-            return ScriptRunner._run_batch_script(script_path, prepared_params)
+            result = ScriptRunner._run_batch_script(script_path, prepared_params)
         elif ext == 'ps1':
-            return ScriptRunner._run_powershell_script(script_path, prepared_params)
+            result = ScriptRunner._run_powershell_script(script_path, prepared_params)
         elif ext == 'js':
-            return ScriptRunner._run_js_script(script_path, prepared_params)
+            result = ScriptRunner._run_js_script(script_path, prepared_params)
         else:
             return False, None, f"未实现的脚本类型: {ext}"
-    
+            
+        # 如果执行成功，根据输出模式处理输出
+        if result[0]:  # 如果成功
+            return ScriptRunner._process_output(result[0], result[1], result[2], output_mode)
+        
+        return result
+        
     @staticmethod
-    def _prepare_params(params, prev_output):
-        """
-        准备脚本参数
+    def _process_output(success, output, error, output_mode):
+        """处理脚本输出，根据输出模式格式化结果
         
         Args:
+            success: 是否成功
+            output: 脚本输出
+            error: 错误信息
+            output_mode: 输出模式 (json, file, none)
+            
+        Returns:
+            tuple: (success, processed_output, error)
+        """
+        if not success or not output:
+            return success, output, error
+            
+        # 根据输出模式处理
+        if output_mode == 'json':
+            # 尝试解析JSON输出
+            try:
+                json_output = json.loads(output)
+                return success, json_output, error
+            except json.JSONDecodeError:
+                logger.warning(f"脚本输出不是有效的JSON格式: {output}")
+                return False, output, "脚本输出不是有效的JSON格式"
+                
+        elif output_mode == 'file':
+            # 检查输出是否是有效的文件路径
+            file_path = output.strip()
+            if os.path.exists(file_path):
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        file_content = f.read()
+                    return success, file_content, error
+                except Exception as e:
+                    logger.error(f"读取输出文件失败: {str(e)}")
+                    return False, output, f"无法读取输出文件: {file_path}, 错误: {str(e)}"
+            else:
+                logger.error(f"输出文件不存在: {file_path}")
+                return False, output, f"输出文件不存在: {file_path}"
+                
+        # output_mode == 'none' 或其他情况
+        return success, output, error
+    
+    @staticmethod
+    def _prepare_params(script_path, params, prev_output):
+        """
+        准备脚本参数，使用标准化的结构
+        
+        Args:
+            script_path: 脚本路径
             params: 用户提供的参数字典
             prev_output: 上一个脚本的输出
             
         Returns:
-            dict: 准备好的参数字典
+            dict: 准备好的标准化参数字典
         """
-        prepared_params = params.copy() if params else {}
+        # 获取脚本ID（如果可用）
+        script_id = None
+        try:
+            # 从文件名提取脚本ID（假设脚本名格式包含ID）
+            # 这里可能需要根据实际情况调整
+            from models.script.script_base import ScriptBase
+            script_info = ScriptBase.get_by_path(script_path)
+            if script_info:
+                script_id = script_info['id']
+        except Exception as e:
+            logger.warning(f"无法获取脚本ID: {str(e)}")
         
-        # 添加上一个脚本的输出作为特殊参数
+        # 创建标准化参数结构
+        standard_params = {
+            "user_params": {},
+            "system_params": {
+                "__execution_time": time.strftime("%Y-%m-%d %H:%M:%S")
+            },
+            "file_params": {}
+        }
+        
+        # 添加用户参数
+        if params:
+            if isinstance(params, dict):
+                standard_params["user_params"] = params.copy()
+                
+                # 提取文件参数（以_file或_path结尾的参数）
+                file_keys = [k for k in params if k.endswith('_file') or k.endswith('_path')]
+                for key in file_keys:
+                    if params[key]:
+                        standard_params["file_params"][key] = params[key]
+        
+        # 添加上一个脚本的输出
         if prev_output is not None:
-            prepared_params['__prev_output'] = prev_output
+            standard_params["system_params"]["__prev_output"] = prev_output
         
-        return prepared_params
+        # 如果有脚本ID，尝试验证参数
+        if script_id:
+            try:
+                valid, error_msg = ScriptParameter.validate_parameters(script_id, standard_params["user_params"])
+                if not valid:
+                    logger.warning(f"参数验证失败: {error_msg}")
+                    # 这里可以选择是否继续执行，或者返回错误
+                    # 目前我们只记录警告，继续执行
+            except Exception as e:
+                logger.warning(f"参数验证过程出错: {str(e)}")
+        
+        return standard_params
     
     @staticmethod
     def _write_params_file(params):

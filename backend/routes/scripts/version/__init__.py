@@ -8,10 +8,12 @@
 from . import version_list
 from . import version_edit
 from . import version_compare
+from . import version_content
 
 # 导出所有路由函数，供外部调用
 __all__ = [
     'version_list',
     'version_edit', 
-    'version_compare'
+    'version_compare',
+    'version_content'
 ]

@@ -174,6 +174,40 @@ export default new Vuex.Store({
       } finally {
         commit('setLoading', false);
       }
+    },
+    
+    // 更新脚本内容和参数
+    async updateScriptContent({ commit }, { scriptId, content, parameters, description }) {
+      commit('setLoading', true);
+      commit('setError', null);
+      try {
+        const formData = new FormData();
+        
+        // 根据文件类型获取合适的扩展名
+        let extension = 'py';
+        const script = await axios.get(`/api/scripts/${scriptId}`);
+        if (script.data.code === 0 && script.data.data && script.data.data.file_type) {
+          extension = script.data.data.file_type;
+        }
+        
+        // 创建临时文件对象
+        const blob = new Blob([content], { type: 'text/plain' });
+        formData.append('file', blob, `script_content.${extension}`);
+        
+        // 添加其他字段
+        formData.append('parameters', JSON.stringify(parameters));
+        if (description) {
+          formData.append('description', description);
+        }
+        
+        const response = await axios.post(`/api/scripts/${scriptId}/content`, formData);
+        return response.data;
+      } catch (error) {
+        commit('setError', error.message);
+        throw error;
+      } finally {
+        commit('setLoading', false);
+      }
     }
   },
   getters: {
